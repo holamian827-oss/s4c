@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>S4C</title>
+    <title>S4C - 班級管理系統</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
@@ -48,7 +48,7 @@
             <div class="bg-white p-6 rounded-lg shadow border-t-4 border-blue-500 flex flex-col h-[550px]">
                 <h3 class="text-lg font-bold mb-4 text-gray-700 sticky top-0 bg-white">⏱️ 系統概況</h3>
                 <div class="overflow-y-auto flex-grow pr-2 hide-scrollbar">
-                    <p class="text-sm text-gray-500 mb-2">由於數據庫未提供登入記錄表，此區預留作未來升級用途。</p>
+                    <p class="text-sm text-gray-500 mb-2">數據庫運行正常，權限系統已啟用。</p>
                     <ul id="adminLoginLog" class="space-y-3 text-sm"></ul>
                 </div>
             </div>
@@ -59,12 +59,12 @@
             <div class="bg-white p-6 rounded-lg shadow border-t-4 border-red-500 flex flex-col h-[550px]">
                 <h3 class="text-lg font-bold mb-4 text-gray-700">🔑 學生帳號管理</h3>
                 <div class="mb-6">
-                    <label class="block text-sm font-semibold text-gray-600 mb-2">選擇學生帳號：</label>
+                    <label class="block text-sm font-semibold text-gray-600 mb-2">選擇帳號：</label>
                     <select id="adminStudentSelect" class="w-full border p-2 rounded bg-gray-50"><option value="">-- 載入中 --</option></select>
                 </div>
                 <div id="adminStudentPanel" class="hidden flex-col gap-6">
                     <div class="bg-gray-50 p-4 rounded border">
-                        <p class="text-sm text-gray-600 mb-1">封鎖狀態：</p>
+                        <p class="text-sm text-gray-600 mb-1">帳號狀態：</p>
                         <p id="adminStudentStatus" class="font-bold text-green-600">正常</p>
                     </div>
                     <div class="flex flex-col gap-3">
@@ -83,15 +83,15 @@
             <button id="btnCloseSysMenu" class="absolute top-4 right-4 text-gray-500 text-xl font-bold">&times;</button>
             <h2 class="text-xl font-bold mb-4 text-blue-700 border-b pb-2">ℹ️ 系統資訊</h2>
             <div class="flex flex-col gap-2 mb-4">
-                <button class="sys-tab-btn w-full text-left p-3 bg-blue-50 text-blue-700 font-bold rounded border" data-target="tabNotes">⚠️ 注意事項</button>
-                <button class="sys-tab-btn w-full text-left p-3 bg-gray-50 text-gray-700 font-bold rounded border" data-target="tabPwd">🔑 更改我的密碼</button>
-                <button class="sys-tab-btn w-full text-left p-3 bg-gray-50 text-gray-700 font-bold rounded border" data-target="tabAbout">ℹ️ 關於此應用</button>
+                <button class="sys-tab-btn w-full text-left p-3 bg-blue-50 text-blue-700 font-bold rounded border border-blue-200" data-target="tabNotes">⚠️ 注意事項</button>
+                <button class="sys-tab-btn w-full text-left p-3 bg-gray-50 text-gray-700 font-bold rounded border border-gray-200" data-target="tabPwd">🔑 更改我的密碼</button>
+                <button class="sys-tab-btn w-full text-left p-3 bg-gray-50 text-gray-700 font-bold rounded border border-gray-200" data-target="tabAbout">ℹ️ 關於此應用</button>
             </div>
             <div class="flex-grow overflow-y-auto relative">
-                <div id="tabNotes" class="sys-tab-content block"><div class="bg-yellow-50 p-3 rounded"><ul class="list-disc ml-5 text-sm text-gray-700 space-y-2"><li>嚴禁將密碼分享給他人。</li><li>如有發現亂加項目者，系統會記錄操作人。</li></ul></div></div>
+                <div id="tabNotes" class="sys-tab-content block"><div class="bg-yellow-50 p-3 rounded"><ul class="list-disc ml-5 text-sm text-gray-700 space-y-2"><li>嚴禁將密碼分享給他人。</li><li>科代表請確保資料準確後才發布項目。</li><li>如有發現亂加項目者，系統會記錄操作人。</li></ul></div></div>
                 <div id="tabPwd" class="sys-tab-content hidden"><div class="bg-gray-50 p-6 rounded border text-center mt-2"><button id="btnChangeMyPwd" class="w-full bg-blue-600 text-white font-bold py-2 rounded">立即更改密碼</button></div></div>
                 <div id="tabAbout" class="sys-tab-content hidden h-full flex flex-col">
-                    <div class="bg-gray-50 border p-3 rounded flex-grow mb-3"><h3 class="font-bold text-gray-700 mb-2">🔄 版本歷程</h3><div class="text-sm text-gray-600"><div><p class="font-bold text-blue-600">v0.5.2 (beta)</p><ul class="list-disc ml-4"><li>正式對接 Cloudflare D1 數據庫。</li><li>後台管理接通真實權限驗證 API。</li></ul></div></div></div>
+                    <div class="bg-gray-50 border p-3 rounded flex-grow mb-3"><h3 class="font-bold text-gray-700 mb-2">🔄 版本歷程</h3><div class="text-sm text-gray-600"><div><p class="font-bold text-blue-600">v1.0 (Official)</p><ul class="list-disc ml-4"><li>正式對接 Cloudflare D1 數據庫。</li><li>後台接通真實權限 API，修復篩選與反饋功能。</li></ul></div></div></div>
                     <div class="border-t pt-3"><h3 class="font-bold text-gray-800 text-sm mb-1">👨‍💻 開發人員名單</h3><p class="text-xs text-gray-600 font-medium">代碼開發與版面設計：羅珏俊<br>環境部署及維護：李嘉宏</p></div>
                 </div>
             </div>
@@ -124,15 +124,27 @@
             <div class="space-y-3 text-sm text-gray-700 mb-6">
                 <p><strong>📌 類型：</strong> <span id="detailType" class="bg-gray-100 px-2 py-1 rounded"></span></p>
                 <p><strong>📖 科目：</strong> <span id="detailSubject"></span></p>
-                <p><strong>📝 備注：</strong> <span id="detailRemarks" class="text-gray-500 italic"></span></p>
+                <p><strong>📝 備注：</strong> <span id="detailRemarks" class="text-gray-500 italic">無</span></p>
                 <p id="detailUrlContainer" class="hidden"><strong>🔗 連結：</strong> <a id="detailUrl" href="#" target="_blank" class="text-blue-500 underline font-bold">點擊前往</a></p>
             </div>
             
             <div id="manageActionContainer" class="flex gap-2 justify-start border-t pt-4 mt-2 hidden">
-                <button id="btnEditTask" class="bg-yellow-500 text-white px-4 py-2 rounded font-bold flex-1">✏️ 修改</button>
-                <button id="btnDeleteTask" class="bg-red-500 text-white px-4 py-2 rounded font-bold flex-1">🗑️ 刪除</button>
+                <button id="btnEditTask" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded font-bold flex-1">✏️ 修改</button>
+                <button id="btnDeleteTask" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-bold flex-1">🗑️ 刪除</button>
             </div>
             <button id="btnCloseDetailBtn" class="bg-gray-200 px-4 py-2 rounded w-full mt-4 font-bold">關閉視窗</button>
+        </div>
+    </div>
+
+    <div id="feedbackModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center hidden z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-96">
+            <h2 class="text-xl font-bold mb-4 text-blue-700 border-b pb-2">💡 意見反饋</h2>
+            <form id="feedbackForm" class="flex flex-col gap-4">
+                <div><label class="block text-sm font-semibold text-gray-700 mb-1">類型</label><select id="feedbackType" class="w-full border p-2 rounded bg-gray-50"><option value="改進建議">改進建議</option><option value="bug反饋">Bug 反饋</option></select></div>
+                <div><label class="block text-sm font-semibold text-gray-700 mb-1">內容</label><textarea id="feedbackText" required rows="3" class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-blue-400"></textarea></div>
+                <div class="flex items-center gap-2"><input type="checkbox" id="feedbackAnonymous" class="rounded text-blue-600"><label for="feedbackAnonymous" class="text-sm font-semibold text-gray-700">匿名反饋</label></div>
+                <div class="flex justify-end gap-2 mt-2 pt-4 border-t"><button type="button" id="btnCloseFeedback" class="bg-gray-300 px-4 py-2 rounded">取消</button><button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded font-bold">提交</button></div>
+            </form>
         </div>
     </div>
 
