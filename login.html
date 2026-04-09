@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登入 - S4C 系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
 </head>
 <body class="bg-gray-100 font-sans text-gray-800 min-h-screen flex items-center justify-center">
 
@@ -47,7 +48,7 @@
 
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">密碼</label>
-                <input type="password" id="password" required placeholder="請輸入密碼" class="w-full border border-gray-300 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition">
+                <input type="password" id="password" required placeholder="預設密碼：12345678" class="w-full border border-gray-300 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition">
             </div>
 
             <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition mt-2 shadow-md hover:shadow-lg">登 入</button>
@@ -72,42 +73,56 @@
 
                 if (role === 'student') {
                     usernameContainer.classList.remove('hidden'); teacherSelectContainer.classList.add('hidden');
-                    usernameInput.required = true;
+                    usernameInput.required = true; passwordInput.placeholder = '預設密碼：12345678';
                 } else if (role === 'teacher') {
                     usernameContainer.classList.add('hidden'); teacherSelectContainer.classList.remove('hidden');
-                    usernameInput.required = false; 
+                    usernameInput.required = false; passwordInput.placeholder = '預設密碼：12345678';
                 } else if (role === 'admin') {
                     usernameContainer.classList.add('hidden'); teacherSelectContainer.classList.add('hidden');
-                    usernameInput.required = false; 
+                    usernameInput.required = false; passwordInput.placeholder = '';
                 }
             });
         });
 
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.textContent = "登入中...";
+            btn.disabled = true;
+
             const role = selectedRoleInput.value;
             const pass = passwordInput.value;
-            let userDisplay = '';
+            let loginUsername = '';
+            
+            // 轉換為數據庫對應的 username 格式
+            if (role === 'admin') loginUsername = 'admin';
+            else if (role === 'teacher') loginUsername = teacherSelect.value;
+            else loginUsername = usernameInput.value + '_同學'; 
 
-            // --- 本地密碼檢查邏輯 ---
-            if (role === 'admin') {
-                if (pass !== 'Admin1234') { alert('❌ 管理員密碼錯誤！'); return; }
-                userDisplay = '系統管理員';
-            } else if (role === 'teacher') {
-                if (pass !== '12345678') { alert('❌ 老師密碼錯誤！'); return; }
-                userDisplay = teacherSelect.value;
-            } else {
-                if (pass !== '12345678') { alert('❌ 密碼錯誤！'); return; }
-                userDisplay = usernameInput.value + '_同學';
+            try {
+                // 呼叫同學寫好的登入 API
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: loginUsername, password: pass, role: role })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    // 登入成功，儲存真實狀態
+                    localStorage.setItem('s4c_user', data.user);
+                    localStorage.setItem('s4c_role', data.role);
+                    window.location.href = 'index.html';
+                } else {
+                    alert(data.message || '登入失敗');
+                }
+            } catch (err) {
+                alert('無法連接伺服器，請確保已部署至 Cloudflare');
+            } finally {
+                btn.textContent = "登 入";
+                btn.disabled = false;
             }
-
-            // 成功後直接存入 LocalStorage
-            localStorage.setItem('s4c_user', userDisplay);
-            localStorage.setItem('s4c_role', role);
-            localStorage.setItem('s4c_token', 'local-token-' + Date.now()); // 假裝有個 token 繞過 app.js 的檢查
-
-            alert('✅ 登入成功！');
-            window.location.href = 'index.html';
         });
     </script>
 </body>
