@@ -24,8 +24,7 @@
 
             <div id="usernameContainer">
                 <label class="block text-sm font-medium text-gray-700 mb-1">學號 / 帳號</label>
-                <input type="text" id="username" required placeholder="例如：22 (輸入學號)" 
-                       class="w-full border border-gray-300 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition">
+                <input type="text" id="username" required placeholder="例如：22 (輸入學號)" class="w-full border border-gray-300 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition">
             </div>
 
             <div id="teacherSelectContainer" class="hidden">
@@ -42,18 +41,16 @@
                     <option value="地理老師">地理老師</option>
                     <option value="音樂老師">音樂老師</option>
                     <option value="視藝老師">視藝老師</option>
+                    <option value="宗教老師">宗教老師</option>
                 </select>
             </div>
 
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">密碼</label>
-                <input type="password" id="password" required placeholder="預設密碼：12345678" 
-                       class="w-full border border-gray-300 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition">
+                <input type="password" id="password" required placeholder="預設密碼：12345678" class="w-full border border-gray-300 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition">
             </div>
 
-            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition mt-2 shadow-md hover:shadow-lg">
-                登 入
-            </button>
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition mt-2 shadow-md hover:shadow-lg">登 入</button>
         </form>
     </div>
 
@@ -68,31 +65,20 @@
 
         roleBtns.forEach(btn => {
             btn.addEventListener('click', () => {
-                roleBtns.forEach(b => {
-                    b.classList.remove('bg-white', 'shadow', 'text-blue-600');
-                    b.classList.add('text-gray-500', 'hover:text-gray-700');
-                });
-                btn.classList.remove('text-gray-500', 'hover:text-gray-700');
-                btn.classList.add('bg-white', 'shadow', 'text-blue-600');
-                
+                roleBtns.forEach(b => { b.classList.remove('bg-white', 'shadow', 'text-blue-600'); b.classList.add('text-gray-500', 'hover:text-gray-700'); });
+                btn.classList.remove('text-gray-500', 'hover:text-gray-700'); btn.classList.add('bg-white', 'shadow', 'text-blue-600');
                 const role = btn.getAttribute('data-role');
                 selectedRoleInput.value = role;
 
                 if (role === 'student') {
-                    usernameContainer.classList.remove('hidden');
-                    teacherSelectContainer.classList.add('hidden');
-                    usernameInput.required = true;
-                    passwordInput.placeholder = '預設密碼：12345678';
+                    usernameContainer.classList.remove('hidden'); teacherSelectContainer.classList.add('hidden');
+                    usernameInput.required = true; passwordInput.placeholder = '預設密碼：12345678';
                 } else if (role === 'teacher') {
-                    usernameContainer.classList.add('hidden');
-                    teacherSelectContainer.classList.remove('hidden');
-                    usernameInput.required = false;
-                    passwordInput.placeholder = '預設密碼：12345678';
+                    usernameContainer.classList.add('hidden'); teacherSelectContainer.classList.remove('hidden');
+                    usernameInput.required = false; passwordInput.placeholder = '預設密碼：12345678';
                 } else if (role === 'admin') {
-                    usernameContainer.classList.add('hidden');
-                    teacherSelectContainer.classList.add('hidden');
-                    usernameInput.required = false;
-                    passwordInput.placeholder = ''; 
+                    usernameContainer.classList.add('hidden'); teacherSelectContainer.classList.add('hidden');
+                    usernameInput.required = false; passwordInput.placeholder = ''; 
                 }
             });
         });
@@ -101,23 +87,15 @@
             e.preventDefault(); 
             const pass = passwordInput.value;
             const role = selectedRoleInput.value;
-            
             let userDisplay = '';
             
-            if (role === 'admin') {
-                userDisplay = '系統管理員';
-            } else if (role === 'teacher') {
-                userDisplay = teacherSelect.value;
-            } else {
-                userDisplay = usernameInput.value + '_同學'; 
-            }
+            if (role === 'admin') userDisplay = '系統管理員';
+            else if (role === 'teacher') userDisplay = teacherSelect.value;
+            else userDisplay = usernameInput.value + '_同學'; 
 
-            // 動態檢查密碼 (從 localStorage 讀取，如果冇就用預設)
             let expectedPwd = (role === 'admin') ? 'Admin1234' : '12345678';
             const savedCustomPwd = localStorage.getItem(`pwd_${userDisplay}`);
-            if (savedCustomPwd) {
-                expectedPwd = savedCustomPwd;
-            }
+            if (savedCustomPwd) expectedPwd = savedCustomPwd;
 
             if (pass === expectedPwd) {
                 localStorage.setItem('s4c_user', userDisplay);
