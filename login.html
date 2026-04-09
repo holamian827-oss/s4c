@@ -47,10 +47,10 @@
 
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">密碼</label>
-                <input type="password" id="password" required placeholder="預設密碼：12345678" class="w-full border border-gray-300 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition">
+                <input type="password" id="password" required placeholder="請輸入密碼" class="w-full border border-gray-300 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition">
             </div>
 
-            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition mt-2 shadow-md hover:shadow-lg">登 入</button>
+            <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition mt-2 shadow-md hover:shadow-lg">登 入</button>
         </form>
     </div>
 
@@ -62,6 +62,7 @@
         const usernameContainer = document.getElementById('usernameContainer');
         const teacherSelectContainer = document.getElementById('teacherSelectContainer');
         const teacherSelect = document.getElementById('teacherSelect');
+        const submitBtn = document.getElementById('submitBtn');
 
         roleBtns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -72,37 +73,53 @@
 
                 if (role === 'student') {
                     usernameContainer.classList.remove('hidden'); teacherSelectContainer.classList.add('hidden');
-                    usernameInput.required = true; passwordInput.placeholder = '預設密碼：12345678';
+                    usernameInput.required = true;
                 } else if (role === 'teacher') {
                     usernameContainer.classList.add('hidden'); teacherSelectContainer.classList.remove('hidden');
-                    usernameInput.required = false; passwordInput.placeholder = '預設密碼：12345678';
+                    usernameInput.required = false; 
                 } else if (role === 'admin') {
                     usernameContainer.classList.add('hidden'); teacherSelectContainer.classList.add('hidden');
-                    usernameInput.required = false; passwordInput.placeholder = ''; 
+                    usernameInput.required = false; 
                 }
             });
         });
 
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault(); 
+            submitBtn.textContent = "登入中...";
+            submitBtn.disabled = true;
+
             const pass = passwordInput.value;
             const role = selectedRoleInput.value;
             let userDisplay = '';
             
-            if (role === 'admin') userDisplay = '系統管理員';
+            if (role === 'admin') userDisplay = 'admin';
             else if (role === 'teacher') userDisplay = teacherSelect.value;
             else userDisplay = usernameInput.value + '_同學'; 
 
-            let expectedPwd = (role === 'admin') ? 'Admin1234' : '12345678';
-            const savedCustomPwd = localStorage.getItem(`pwd_${userDisplay}`);
-            if (savedCustomPwd) expectedPwd = savedCustomPwd;
+            try {
+                // 發送真實請求到 D1 數據庫驗證
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: userDisplay, password: pass, role: role })
+                });
 
-            if (pass === expectedPwd) {
-                localStorage.setItem('s4c_user', userDisplay);
-                localStorage.setItem('s4c_role', role);
-                window.location.href = `index.html?user=${encodeURIComponent(userDisplay)}&role=${encodeURIComponent(role)}`; 
-            } else {
-                alert('密碼錯誤！請檢查您的權限與密碼。');
+                const result = await response.json();
+
+                if (result.success) {
+                    localStorage.setItem('s4c_token', result.token);
+                    localStorage.setItem('s4c_user', result.user);
+                    localStorage.setItem('s4c_role', result.role);
+                    window.location.href = 'index.html'; 
+                } else {
+                    alert(result.message || '登入失敗！請檢查密碼。');
+                }
+            } catch (err) {
+                alert('伺服器連線錯誤！');
+            } finally {
+                submitBtn.textContent = "登 入";
+                submitBtn.disabled = false;
             }
         });
     </script>
