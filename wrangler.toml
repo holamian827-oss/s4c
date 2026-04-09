@@ -2,6 +2,6 @@ name = "s4c"
 pages_build_output_dir = "."
 
 [[d1_databases]]
-binding = "DB" # 在代码里通过 env.DB 调用
+binding = "s4c-db" # 在代码里通过 env.DB 调用
 database_name = "s4c-db"
 database_id = "9a793beb-51d2-4b30-b6c5-f9823d93f30e" # 去 Cloudflare 后台复制
