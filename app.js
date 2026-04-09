@@ -1,60 +1,69 @@
 document.addEventListener('DOMContentLoaded', function() {
     
     // 1. 【身分檢查站】
-  // 替换原有的 mockTasks 和日历初始化逻辑
-let mockTasks = [];
-let calendar;
-
-async function loadTasks() {
-    try {
-        const res = await fetch('/api/tasks');
-        mockTasks = await res.json();
-        
-        // SQLite 保存的 boolean 可能是 1/0，转回 true/false
-        mockTasks = mockTasks.map(t => ({ ...t, completed: t.completed === 1 }));
-
-        if (savedRole !== 'admin' && calendarEl) {
-            calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
-                events: mockTasks,
-                eventClick: (info) => openDetailModalById(info.event.id),
-                eventClassNames: (arg) => arg.event.extendedProps.completed ? ['task-completed'] : []
-            });
-            calendar.render();
-        }
-    } catch (e) {
-        console.error("無法加載數據:", e);
-    }
-}
-loadTasks(); // 页面加载时执行
-
     const savedUser = localStorage.getItem('s4c_user');
     const savedRole = localStorage.getItem('s4c_role');
+    const savedToken = localStorage.getItem('s4c_token');
 
-    if (!savedUser || !savedRole || savedUser === '未登入') {
+    if (!savedUser || !savedRole || !savedToken) {
         window.location.href = 'login.html';
         return; 
     }
 
-    // ✅ 安全賦值與移除遮罩
     const navUserInfoEl = document.getElementById('navUserInfo');
     if (navUserInfoEl) navUserInfoEl.textContent = savedUser;
     
     document.getElementById('loadingShield')?.classList.add('hidden');
 
-    // 🔒 權限與視圖控制 (✅ 全部加入安全檢查)
+    // 🔒 權限與視圖控制
     const btnOpenModal = document.getElementById('btnOpenModal');
     const btnNavAdminAdd = document.getElementById('btnNavAdminAdd');
+    const btnGoAdmin = document.getElementById('btnGoAdmin');
     const mainAppView = document.getElementById('mainAppView');
     const adminDashboardView = document.getElementById('adminDashboardView');
     
+    mainAppView?.classList.remove('hidden');
+    adminDashboardView?.classList.add('hidden');
+
     if (savedRole === 'admin') {
-        adminDashboardView?.classList.remove('hidden');
+        btnGoAdmin?.classList.remove('hidden');
         btnNavAdminAdd?.classList.remove('hidden');
-    } else {
-        mainAppView?.classList.remove('hidden');
-        if (savedRole === 'teacher') btnOpenModal?.classList.remove('hidden');
+    } else if (savedRole === 'teacher') {
+        btnOpenModal?.classList.remove('hidden');
     }
+
+    // 管理員頁面跳轉
+    btnGoAdmin?.addEventListener('click', () => {
+        mainAppView.classList.add('hidden');
+        adminDashboardView.classList.remove('hidden');
+        renderAdminTaskTable(); 
+    });
+
+    document.getElementById('btnBackToCalendar')?.addEventListener('click', () => {
+        adminDashboardView.classList.add('hidden');
+        mainAppView.classList.remove('hidden');
+        if(calendar) calendar.render();
+    });
+
+    // 管理員後台 Tab 切換
+    const adminTabBtns = document.querySelectorAll('.admin-tab-btn');
+    const adminTabContents = document.querySelectorAll('.admin-tab-content');
+
+    adminTabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            adminTabBtns.forEach(b => {
+                b.classList.remove('bg-purple-600', 'text-white');
+                b.classList.add('bg-white', 'text-gray-600');
+            });
+            btn.classList.remove('bg-white', 'text-gray-600');
+            btn.classList.add('bg-purple-600', 'text-white');
+
+            const targetId = btn.getAttribute('data-target');
+            adminTabContents.forEach(content => {
+                content.classList.toggle('hidden', content.id !== targetId);
+            });
+        });
+    });
 
     // ≡ 系統菜單邏輯
     const sysMenuModal = document.getElementById('sysMenuModal');
@@ -80,57 +89,58 @@ loadTasks(); // 页面加载时执行
         });
     });
 
-    document.getElementById('btnChangeMyPwd')?.addEventListener('click', () => {
-        const currentPwd = prompt("請輸入您的目前密碼：");
-        if (!currentPwd) return; 
-        const expectedPwd = localStorage.getItem(`pwd_${savedUser}`) || (savedRole === 'admin' ? 'Admin1234' : '12345678');
-        if (currentPwd !== expectedPwd) { alert("❌ 目前密碼錯誤！"); return; }
-        const newPwd = prompt("請輸入新密碼 (最少 6 個字元)：");
-        if (newPwd && newPwd.length >= 6) {
-            localStorage.setItem(`pwd_${savedUser}`, newPwd);
-            alert("✅ 密碼更改成功！"); sysMenuModal?.classList.add('hidden');
-        } else { alert("❌ 密碼太短。"); }
-    });
-
-    // ✅ 安全綁定登出按鈕
+    // 登出按鈕
     const logoutBtn = document.querySelector('a[href="login.html"]');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             localStorage.removeItem('s4c_user'); 
             localStorage.removeItem('s4c_role');
+            localStorage.removeItem('s4c_token');
         });
     }
 
     // ---------------------------------------------------------
-    // 數據與日曆邏輯 (支援修改刪除)
+    // 真實數據庫與日曆邏輯
     // ---------------------------------------------------------
-    let mockTasks = [
-        { id: '1', title: '物理大測', date: '2026-04-10', type: 'test', subject: '物理', color: '#EF4444', remarks: '第一至三章', completed: false, createdBy: '物理老師' },
-        { id: '2', title: '數學工作紙', date: '2026-04-06', type: 'homework', subject: '數學 (班主任)', color: '#3B82F6', url: 'https://classroom.google.com', completed: false, createdBy: '班主任' }
-    ];
-
+    let taskList = [];
     let currentSelectedTaskId = null; 
     let editingTaskId = null; 
 
     const calendarEl = document.getElementById('calendar');
     let calendar;
-    if (savedRole !== 'admin' && calendarEl) {
-        calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listMonth' },
-            events: mockTasks,
-            eventClick: (info) => openDetailModalById(info.event.id),
-            eventClassNames: (arg) => arg.event.extendedProps.completed ? ['task-completed'] : []
-        });
-        calendar.render();
+
+    async function loadTasks() {
+        try {
+            const res = await fetch('/api/tasks');
+            const data = await res.json();
+            
+            taskList = data.map(t => ({ ...t, completed: t.completed === 1 }));
+
+            if (savedRole !== 'admin' && calendarEl) {
+                if (calendar) calendar.destroy();
+                calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listMonth' },
+                    events: taskList,
+                    eventClick: (info) => openDetailModalById(info.event.id),
+                    eventClassNames: (arg) => arg.event.extendedProps.completed ? ['task-completed'] : []
+                });
+                calendar.render();
+            }
+            // 同時刷新管理員列表
+            renderAdminTaskTable();
+        } catch (e) {
+            console.error("無法加載數據:", e);
+        }
     }
 
+    loadTasks();
+
     function openDetailModalById(id) {
-        const task = mockTasks.find(t => t.id === id);
+        const task = taskList.find(t => t.id === id);
         if(!task) return;
         currentSelectedTaskId = id;
 
-        // ✅ 安全寫入詳情
         const elTitle = document.getElementById('detailTitle');
         const elType = document.getElementById('detailType');
         const elSubject = document.getElementById('detailSubject');
@@ -149,7 +159,7 @@ loadTasks(); // 页面加载时执行
             urlContainer.classList.add('hidden'); 
         }
 
-        const isCreatorOrAdmin = (savedRole === 'admin' || task.createdBy === savedUser);
+        const isCreatorOrAdmin = (savedRole === 'admin' || task.createdBy === savedUser || savedRole === 'teacher');
         const manageContainer = document.getElementById('manageActionContainer');
         const studentContainer = document.getElementById('studentActionContainer');
 
@@ -159,28 +169,16 @@ loadTasks(); // 页面加载时执行
         } else {
             manageContainer?.classList.add('hidden');
             studentContainer?.classList.remove('hidden');
-            
-            const btnDone = document.getElementById('btnMarkDone');
-            const btnUndone = document.getElementById('btnMarkUndone');
-            if (task.completed) { 
-                btnDone?.classList.add('hidden'); 
-                btnUndone?.classList.remove('hidden'); 
-            } else { 
-                btnDone?.classList.remove('hidden'); 
-                btnUndone?.classList.add('hidden'); 
-            }
         }
 
         document.getElementById('detailModal')?.classList.remove('hidden');
     }
 
-    // 關閉詳情
     document.getElementById('btnCloseDetailX')?.addEventListener('click', () => document.getElementById('detailModal')?.classList.add('hidden'));
     document.getElementById('btnCloseDetailBtn')?.addEventListener('click', () => document.getElementById('detailModal')?.classList.add('hidden'));
 
-    // ✏️ 修改按鈕
     document.getElementById('btnEditTask')?.addEventListener('click', () => {
-        const task = mockTasks.find(t => t.id === currentSelectedTaskId);
+        const task = taskList.find(t => t.id === currentSelectedTaskId);
         if(!task) return;
         
         const inputTitle = document.getElementById('inputTitle');
@@ -190,7 +188,6 @@ loadTasks(); // 页面加载时执行
         const inputSubject = document.getElementById('inputSubject');
         const inputDate = document.getElementById('inputDate');
 
-        // ✅ 安全讀取與替換
         if(inputTitle) inputTitle.value = task.title.replace(/^\[.*?\] /, ''); 
         if(inputRemarks) inputRemarks.value = task.remarks || '';
         if(inputUrl) inputUrl.value = task.url || '';
@@ -208,20 +205,19 @@ loadTasks(); // 页面加载时执行
         document.getElementById('addModal')?.classList.remove('hidden');
     });
 
-    // 🗑️ 刪除按鈕
-    document.getElementById('btnDeleteTask')?.addEventListener('click', () => {
+    document.getElementById('btnDeleteTask')?.addEventListener('click', async () => {
         if (confirm("⚠️ 確定要刪除此項目嗎？此操作無法還原。")) {
-            mockTasks = mockTasks.filter(t => t.id !== currentSelectedTaskId);
-            if (calendar) {
-                const eventObj = calendar.getEventById(currentSelectedTaskId);
-                if(eventObj) eventObj.remove();
+            try {
+                await fetch(`/api/tasks?id=${currentSelectedTaskId}`, { method: 'DELETE' });
+                alert("🗑️ 項目已刪除！");
+                document.getElementById('detailModal')?.classList.add('hidden');
+                loadTasks();
+            } catch (e) {
+                alert("刪除失敗，請稍後再試。");
             }
-            alert("🗑️ 項目已刪除！");
-            document.getElementById('detailModal')?.classList.add('hidden');
         }
     });
 
-    // 新增/修改表單提交
     const addTaskForm = document.getElementById('addTaskForm');
     const openAddModal = () => {
         editingTaskId = null; 
@@ -234,14 +230,18 @@ loadTasks(); // 页面加载时执行
     
     btnOpenModal?.addEventListener('click', openAddModal);
     btnNavAdminAdd?.addEventListener('click', openAddModal);
+    document.getElementById('btnAdminListAdd')?.addEventListener('click', openAddModal);
     
     document.getElementById('btnCloseModal')?.addEventListener('click', () => { 
         document.getElementById('addModal')?.classList.add('hidden'); 
         addTaskForm?.reset(); 
     });
 
-    addTaskForm?.addEventListener('submit', (e) => {
+    addTaskForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const btnSubmitTask = document.getElementById('btnSubmitTask');
+        btnSubmitTask.disabled = true;
+        btnSubmitTask.textContent = "處理中...";
         
         const inputUrlEl = document.getElementById('inputUrl');
         let urlInput = inputUrlEl ? inputUrlEl.value.trim() : '';
@@ -251,21 +251,17 @@ loadTasks(); // 页面加载时执行
 
         const typeEl = document.getElementById('inputType');
         const titleEl = document.getElementById('inputTitle');
-        const importanceEl = document.getElementById('inputImportance');
         const dateEl = document.getElementById('inputDate');
         const subjectEl = document.getElementById('inputSubject');
         const remarksEl = document.getElementById('inputRemarks');
 
         const type = typeEl ? typeEl.value : 'homework';
         const title = titleEl ? titleEl.value : '';
-        const importance = importanceEl ? importanceEl.value : '';
-        const fullTitle = (type === 'test' ? `[${importance}] ` : '') + title;
-        
         let eventColor = type === 'test' ? '#EF4444' : type === 'notice' ? '#F59E0B' : type === 'event' ? '#10B981' : '#3B82F6';
 
         const taskData = {
             id: editingTaskId || String(Date.now()),
-            title: fullTitle,
+            title: title,
             date: dateEl ? dateEl.value : '',
             type: type,
             subject: subjectEl ? subjectEl.value : '',
@@ -276,29 +272,98 @@ loadTasks(); // 页面加载时执行
             createdBy: savedUser
         };
 
-        if (editingTaskId) {
-            const taskIndex = mockTasks.findIndex(t => t.id === editingTaskId);
-            if(taskIndex !== -1) mockTasks[taskIndex] = taskData;
+        try {
+            await fetch('/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(taskData)
+            });
             
-            if (calendar) {
-                const existingEvent = calendar.getEventById(editingTaskId);
-                if (existingEvent) existingEvent.remove();
-                calendar.addEvent({ ...taskData, extendedProps: taskData });
-            }
-            alert("✅ 項目已更新！");
-        } else {
-            mockTasks.push(taskData);
-            if (calendar) calendar.addEvent({ ...taskData, extendedProps: taskData });
-            alert("✅ 新項目已儲存！");
+            alert(editingTaskId ? "✅ 項目已更新！" : "✅ 新項目已儲存！");
+            document.getElementById('addModal')?.classList.add('hidden');
+            addTaskForm.reset();
+            loadTasks(); 
+        } catch (err) {
+            alert("儲存失敗，請檢查網絡連線。");
+        } finally {
+            btnSubmitTask.disabled = false;
+            btnSubmitTask.textContent = "儲存";
         }
-
-        document.getElementById('addModal')?.classList.add('hidden');
-        addTaskForm.reset();
     });
 
-    // 管理員數據渲染
-    if (savedRole === 'admin') {
-        const ul = document.getElementById('adminLoginLog');
-        if (ul) ul.innerHTML = `<li class="border-b pb-2"><span class="font-bold text-blue-600">22_同學</span> <span class="text-xs text-gray-500">剛剛</span></li>`;
+    // ---------------------------------------------------------
+    // 管理員後台專用渲染函數
+    // ---------------------------------------------------------
+    function renderAdminTaskTable() {
+        const tbody = document.getElementById('adminTaskTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (taskList.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-gray-500">目前數據庫中沒有任何項目。</td></tr>`;
+            return;
+        }
+
+        const sortedTasks = [...taskList].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        sortedTasks.forEach(task => {
+            const tr = document.createElement('tr');
+            tr.className = "border-b hover:bg-gray-50";
+            
+            let typeBadge = '';
+            if(task.type === 'test') typeBadge = '<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">測驗</span>';
+            else if(task.type === 'homework') typeBadge = '<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">功課</span>';
+            else typeBadge = `<span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-bold">${task.type}</span>`;
+
+            tr.innerHTML = `
+                <td class="p-3">${task.date}</td>
+                <td class="p-3">${typeBadge}</td>
+                <td class="p-3">${task.subject || '無'}</td>
+                <td class="p-3 font-semibold text-gray-800">${task.title}</td>
+                <td class="p-3 text-center">
+                    <button class="text-blue-600 hover:text-blue-800 font-bold mr-2" onclick="editTaskFromAdmin('${task.id}')">編輯</button>
+                    <button class="text-red-600 hover:text-red-800 font-bold" onclick="deleteTaskFromAdmin('${task.id}')">刪除</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
     }
+
+    window.deleteTaskFromAdmin = async function(id) {
+        if (confirm("⚠️ 確定要在後台刪除此項目嗎？")) {
+            try {
+                await fetch(`/api/tasks?id=${id}`, { method: 'DELETE' });
+                alert("🗑️ 項目已刪除！");
+                loadTasks(); 
+            } catch (e) {
+                alert("刪除失敗");
+            }
+        }
+    };
+
+    window.editTaskFromAdmin = function(id) {
+        openDetailModalById(id);
+        document.getElementById('btnEditTask').click();
+    };
+
+    // 學生帳號管理控制 (純前端演示)
+    const adminStudentSelect = document.getElementById('adminStudentSelect');
+    const adminStudentPanel = document.getElementById('adminStudentPanel');
+    const adminStudentEmptyMsg = document.getElementById('adminStudentEmptyMsg');
+
+    adminStudentSelect?.addEventListener('change', (e) => {
+        if (e.target.value) {
+            adminStudentPanel.classList.remove('hidden');
+            adminStudentPanel.classList.add('flex');
+            adminStudentEmptyMsg.classList.add('hidden');
+        } else {
+            adminStudentPanel.classList.add('hidden');
+            adminStudentPanel.classList.remove('flex');
+            adminStudentEmptyMsg.classList.remove('hidden');
+        }
+    });
+
+    document.getElementById('btnAdminResetPwd')?.addEventListener('click', () => {
+        alert(`此功能需對接 D1 數據庫用戶表，目前為演示狀態。`);
+    });
 });
