@@ -9,55 +9,83 @@
     <style>
         #calendar { max-width: 1100px; margin: 20px auto; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .task-completed { text-decoration: line-through; opacity: 0.6; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <div id="loadingShield" class="fixed inset-0 bg-white z-[9999] flex items-center justify-center font-bold text-blue-600 text-lg">數據同步中...</div>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <div id="loadingShield" class="fixed inset-0 bg-white z-[9999] flex items-center justify-center font-bold text-blue-600">數據同步中...</div>
 
-    <nav class="bg-blue-700 text-white p-4 shadow-md flex justify-between items-center">
-        <h1 class="text-xl font-bold">📚 S4C</h1>
+    <nav class="bg-blue-700 text-white p-4 shadow-md flex justify-between items-center relative z-10">
+        <h1 class="text-2xl font-bold tracking-wider">S4C</h1>
         <div class="flex gap-3 items-center">
-            <button id="btnGoAdmin" class="bg-purple-600 px-3 py-1 rounded text-sm font-bold hidden">⚙️ 管理後台</button>
-            <span id="navUserInfo" class="text-sm font-medium"></span>
-            <a href="login.html" onclick="localStorage.clear()" class="bg-red-500 px-3 py-1 rounded text-sm">登出</a>
+            <button id="btnGoAdmin" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm transition font-bold shadow hidden">⚙️ 管理後台</button>
+            <button id="btnNavAdminAdd" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm transition font-bold shadow hidden">＋ 新增項目</button>
+            <span id="navUserInfo" class="text-sm font-bold text-blue-100"></span>
+            <a href="login.html" onclick="localStorage.clear()" class="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm transition font-semibold">登出</a>
+            <button id="btnSysMenu" class="bg-blue-900 hover:bg-blue-950 px-3 py-1 rounded text-sm transition font-bold ml-2">≡</button>
         </div>
     </nav>
 
-    <main id="mainAppView" class="container mx-auto p-4">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-lg font-bold text-gray-700">📅 作業與測驗日曆</h2>
-            <button id="btnOpenModal" class="bg-green-600 text-white px-4 py-2 rounded font-bold shadow hidden">＋ 新增項目</button>
+    <main id="mainAppView" class="container mx-auto p-4 flex-grow">
+        <div class="bg-white p-4 rounded-lg shadow-md mb-6 flex items-center border-l-4 border-blue-600">
+            <span class="font-bold text-gray-700 mr-4">📅 班級作業日曆</span>
+            <button id="btnOpenModal" class="ml-auto bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded transition font-bold shadow hidden">＋ 新增項目</button>
         </div>
         <div id="calendar"></div>
     </main>
 
-    <main id="adminDashboardView" class="container mx-auto p-4 hidden">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold">🛡️ 系統管理面板</h2>
-            <button id="btnBackToCalendar" class="bg-gray-600 text-white px-4 py-2 rounded">返回日曆</button>
+    <main id="adminDashboardView" class="container mx-auto mt-6 p-4 hidden flex-grow max-w-7xl">
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <h2 class="text-3xl font-bold text-gray-800">🛡️ 系統管理中心</h2>
+            <button id="btnBackToCalendar" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded font-bold shadow transition">🔙 返回日曆</button>
         </div>
-        <div class="bg-white rounded-lg shadow overflow-hidden">
-            <table class="w-full text-left">
-                <thead class="bg-gray-200">
-                    <tr>
-                        <th class="p-3">日期</th><th class="p-3">科目</th><th class="p-3">內容</th><th class="p-3">操作</th>
-                    </tr>
-                </thead>
+        <div class="flex gap-4 mb-6">
+            <button class="admin-tab-btn bg-purple-600 text-white px-4 py-2 rounded font-bold shadow" data-target="adminTabOverview">📊 儀表盤</button>
+            <button class="admin-tab-btn bg-white text-gray-600 border px-4 py-2 rounded font-bold hover:bg-gray-50" data-target="adminTabTasks">📋 項目管理</button>
+        </div>
+        <div id="adminTabOverview" class="admin-tab-content grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-lg shadow border-t-4 border-blue-500 h-[300px]">
+                <h3 class="font-bold mb-4">⏱️ 最近動態</h3>
+                <p class="text-gray-500">系統運行正常</p>
+            </div>
+        </div>
+        <div id="adminTabTasks" class="admin-tab-content hidden bg-white p-6 rounded-lg shadow border-t-4 border-purple-500">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold">📋 所有項目清單</h3>
+                <button id="btnAdminListAdd" class="bg-green-500 text-white px-3 py-1 rounded text-sm font-bold shadow">＋ 新增項目</button>
+            </div>
+            <table class="w-full text-left text-sm border-collapse">
+                <thead><tr class="bg-gray-100"><th class="p-3">日期</th><th class="p-3">科目</th><th class="p-3">標題</th><th class="p-3">操作</th></tr></thead>
                 <tbody id="adminTaskTableBody"></tbody>
             </table>
         </div>
     </main>
 
-    <div id="addModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-        <div class="bg-white p-6 rounded-lg w-96">
-            <h2 id="modalTitle" class="text-lg font-bold mb-4">📝 編輯項目</h2>
-            <form id="addTaskForm" class="space-y-4">
-                <input type="text" id="inputTitle" placeholder="標題" required class="w-full border p-2 rounded">
-                <input type="date" id="inputDate" required class="w-full border p-2 rounded">
-                <select id="inputType" class="w-full border p-2 rounded"><option value="homework">功課</option><option value="test">測驗</option></select>
-                <input type="text" id="inputSubject" placeholder="科目" class="w-full border p-2 rounded">
-                <textarea id="inputRemarks" placeholder="備注" class="w-full border p-2 rounded"></textarea>
-                <div class="flex justify-end gap-2">
+    <div id="sysMenuModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center hidden z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md relative">
+            <button id="btnCloseSysMenu" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 font-bold">&times;</button>
+            <h2 class="text-xl font-bold mb-4 text-blue-700 border-b pb-2">ℹ️ 系統菜單</h2>
+            <div class="space-y-4">
+                <div class="bg-gray-50 p-6 rounded border text-center">
+                    <button onclick="handleChangePassword()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded shadow">🔑 更改我的數據庫密碼</button>
+                    <p class="text-xs text-gray-400 mt-2">修改後密碼將同步至雲端 D1 數據庫</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="addModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center hidden z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-96">
+            <h2 id="modalTitle" class="text-xl font-bold mb-4 text-blue-700 border-b pb-2">📝 新增項目</h2>
+            <form id="addTaskForm" class="flex flex-col gap-4">
+                <input type="text" id="inputTitle" placeholder="項目名稱" required class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-blue-400">
+                <input type="date" id="inputDate" required class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-blue-400">
+                <select id="inputType" class="w-full border p-2 rounded bg-gray-50">
+                    <option value="homework">功課</option><option value="test">測驗</option><option value="notice">通告</option>
+                </select>
+                <input type="text" id="inputSubject" placeholder="科目" class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-blue-400">
+                <textarea id="inputRemarks" placeholder="備注 (選填)" class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-blue-400"></textarea>
+                <div class="flex justify-end gap-2 mt-2 pt-4 border-t">
                     <button type="button" onclick="document.getElementById('addModal').classList.add('hidden')" class="bg-gray-300 px-4 py-2 rounded">取消</button>
                     <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded font-bold">儲存</button>
                 </div>
@@ -65,15 +93,14 @@
         </div>
     </div>
 
-    <div id="detailModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-        <div class="bg-white p-6 rounded-lg w-80">
-            <h2 id="detailTitle" class="text-xl font-bold mb-2"></h2>
-            <p id="detailInfo" class="text-gray-600 mb-6"></p>
-            <div id="manageActionContainer" class="flex gap-2 hidden border-t pt-4">
-                <button id="btnEditTask" class="bg-yellow-500 text-white px-3 py-1 rounded flex-1">編輯</button>
-                <button id="btnDeleteTask" class="bg-red-500 text-white px-3 py-1 rounded flex-1">刪除</button>
+    <div id="detailModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center hidden z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-96">
+            <h2 id="detailTitle" class="text-xl font-bold mb-4 border-b pb-2"></h2>
+            <div id="manageActionContainer" class="flex gap-2 border-t pt-4 hidden">
+                <button id="btnEditTask" class="bg-yellow-500 text-white px-4 py-2 rounded font-bold flex-1">✏️ 修改</button>
+                <button id="btnDeleteTask" class="bg-red-500 text-white px-4 py-2 rounded font-bold flex-1">🗑️ 刪除</button>
             </div>
-            <button onclick="document.getElementById('detailModal').classList.add('hidden')" class="w-full mt-4 bg-gray-200 py-1 rounded">關閉</button>
+            <button onclick="document.getElementById('detailModal').classList.add('hidden')" class="bg-gray-200 w-full mt-4 py-2 rounded font-bold">關閉</button>
         </div>
     </div>
 
