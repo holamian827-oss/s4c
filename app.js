@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const addModal = document.getElementById('addModal');
     const addTaskForm = document.getElementById('addTaskForm');
 
-    // 權限顯示
+    // 權限控制
     if (savedRole === 'admin') {
         document.getElementById('btnGoAdmin')?.classList.remove('hidden');
         document.getElementById('btnNavAdminAdd')?.classList.remove('hidden');
@@ -21,61 +21,105 @@ document.addEventListener('DOMContentLoaded', function() {
     let calendar;
     let currentTaskId = null;
 
-    // --- 同步 D1 數據 ---
+    // --- 同步數據 ---
     async function refreshData() {
-        const res = await fetch('/api/tasks');
-        taskList = await res.json();
-        const events = taskList.map(t => ({ ...t, completed: t.completed === 1 }));
-        
-        if (!calendar && document.getElementById('calendar') && savedRole !== 'admin') {
-            calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
-                initialView: 'dayGridMonth',
-                events: events,
-                eventClick: (info) => openDetail(info.event.id)
-            });
-            calendar.render();
-        } else if (calendar) {
-            calendar.removeAllEvents();
-            calendar.addEventSource(events);
-        }
-        if (savedRole === 'admin') renderAdminTable();
-        document.getElementById('loadingShield')?.classList.add('hidden');
+        try {
+            const res = await fetch('/api/tasks');
+            taskList = await res.json();
+            const events = taskList.map(t => ({ ...t, completed: t.completed === 1 }));
+            
+            if (!calendar && document.getElementById('calendar') && savedRole !== 'admin') {
+                calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+                    initialView: 'dayGridMonth',
+                    events: events,
+                    eventClick: (info) => openDetail(info.event.id)
+                });
+                calendar.render();
+            } else if (calendar) {
+                calendar.removeAllEvents();
+                calendar.addEventSource(events);
+            }
+            // 重要：管理員登入後立刻渲染表格
+            if (savedRole === 'admin') {
+                renderAdminTaskTable();
+                renderUserManagement();
+            }
+            document.getElementById('loadingShield')?.classList.add('hidden');
+        } catch (e) { console.error(e); }
     }
 
-    // --- 打開新增彈窗 ---
-    const openAddModal = () => {
-        currentTaskId = null; 
-        addTaskForm.reset();
-        document.getElementById('modalTitle').textContent = "📝 新增項目";
-        addModal.classList.remove('hidden');
+    // --- 管理員：渲染表格 ---
+    function renderAdminTaskTable() {
+        const tbody = document.getElementById('adminTaskTableBody');
+        if(!tbody) return;
+        tbody.innerHTML = taskList.map(t => `
+            <tr class="border-b hover:bg-gray-50">
+                <td class="p-3 text-xs">${t.date}</td>
+                <td class="p-3">${t.title}</td>
+                <td class="p-3 text-center">
+                    <button onclick="editFromAdmin('${t.id}')" class="text-blue-600 mr-2 text-xs font-bold">編輯</button>
+                    <button onclick="deleteFromAdmin('${t.id}')" class="text-red-600 text-xs font-bold">刪除</button>
+                </td>
+            </tr>
+        `).join('') || '<tr><td colspan="3" class="p-4 text-center text-gray-400">暫無項目</td></tr>';
+    }
+
+    // --- 管理員：封禁功能 ---
+    window.banUser = async (targetUser, duration) => {
+        let bannedUntil = "";
+        const now = new Date();
+        if (duration === '1d') {
+            now.setDate(now.getDate() + 1);
+            bannedUntil = now.toISOString();
+        } else if (duration === 'perm') {
+            bannedUntil = "permanent";
+        }
+
+        const res = await fetch('/api/admin/user-status', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ username: targetUser, bannedUntil })
+        });
+        if ((await res.json()).success) alert(`已設置 ${targetUser} 的封禁狀態`);
     };
 
-    document.getElementById('btnOpenModal')?.addEventListener('click', openAddModal);
-    document.getElementById('btnNavAdminAdd')?.addEventListener('click', openAddModal);
-    document.getElementById('btnAdminListAdd')?.addEventListener('click', openAddModal);
+    function renderUserManagement() {
+        const container = document.getElementById('userListContainer');
+        if(!container) return;
+        // 這裡列出 15, 22, 33 號作為演示，你可以根據 init.js 修改
+        const demoUsers = ["15_同學", "22_同學", "33_同學"];
+        container.innerHTML = demoUsers.map(u => `
+            <div class="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                <span class="text-sm font-bold">${u}</span>
+                <div class="flex gap-1">
+                    <button onclick="banUser('${u}', '1d')" class="bg-orange-500 text-white text-[10px] px-2 py-1 rounded">1天</button>
+                    <button onclick="banUser('${u}', 'perm')" class="bg-red-600 text-white text-[10px] px-2 py-1 rounded">永久</button>
+                    <button onclick="banUser('${u}', '')" class="bg-green-600 text-white text-[10px] px-2 py-1 rounded">解封</button>
+                </div>
+            </div>
+        `).join('');
+    }
 
-    // --- 雲端修改密碼 ---
-    window.handleChangePassword = async function() {
-        const oldPwd = prompt("請輸入您的舊密碼：");
-        if (!oldPwd) return;
-        const newPwd = prompt("請輸入新密碼 (至少 6 位)：");
-        if (!newPwd || newPwd.length < 6) { alert("密碼太短！"); return; }
-
+    // --- 修改密碼功能 ---
+    window.handleChangePassword = async () => {
+        const oldP = prompt("舊密碼:");
+        const newP = prompt("新密碼 (至少6位):");
+        if(!oldP || !newP || newP.length < 6) return alert("密碼太短");
         const res = await fetch('/api/change-password', {
             method: 'POST',
-            body: JSON.stringify({ username: savedUser, oldPassword: oldPwd, newPassword: newPwd })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ username: savedUser, oldPassword: oldP, newPassword: newP })
         });
-        const result = await res.json();
-        if (result.success) {
-            alert("✅ 密碼已在雲端數據庫修改成功！請重新登入。");
-            localStorage.clear();
-            window.location.href = 'login.html';
-        } else {
-            alert("❌ 修改失敗：" + result.message);
-        }
+        if((await res.json()).success) { alert("修改成功！請重新登入"); localStorage.clear(); location.reload(); }
+        else { alert("修改失敗，可能是舊密碼錯誤"); }
     };
 
-    // --- 提交作業項目 ---
+    // --- 彈窗按鈕綁定 ---
+    const openAdd = () => { currentTaskId = null; addTaskForm.reset(); addModal.classList.remove('hidden'); };
+    document.getElementById('btnOpenModal')?.addEventListener('click', openAdd);
+    document.getElementById('btnNavAdminAdd')?.addEventListener('click', openAdd);
+    document.getElementById('btnAdminListAdd')?.addEventListener('click', openAdd);
+
     addTaskForm.onsubmit = async (e) => {
         e.preventDefault();
         const data = {
@@ -84,60 +128,38 @@ document.addEventListener('DOMContentLoaded', function() {
             date: document.getElementById('inputDate').value,
             type: document.getElementById('inputType').value,
             subject: document.getElementById('inputSubject').value,
-            remarks: document.getElementById('inputRemarks').value,
-            createdBy: savedUser,
-            completed: 0
+            createdBy: savedUser, completed: 0
         };
-        await fetch('/api/tasks', { method: 'POST', body: JSON.stringify(data) });
-        addModal.classList.add('hidden');
-        refreshData();
-    };
-
-    function openDetail(id) {
-        currentTaskId = id;
-        const task = taskList.find(t => t.id === id);
-        document.getElementById('detailTitle').textContent = task.title;
-        document.getElementById('detailModal').classList.remove('hidden');
-        document.getElementById('manageActionContainer')?.classList.toggle('hidden', !(savedRole === 'admin' || savedRole === 'teacher'));
-    }
-
-    document.getElementById('btnDeleteTask').onclick = async () => {
-        if (!confirm("確定刪除？")) return;
-        await fetch(`/api/tasks?id=${currentTaskId}`, { method: 'DELETE' });
+        await fetch('/api/tasks', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data) 
+        });
         location.reload();
     };
 
-    document.getElementById('btnEditTask').onclick = () => {
-        const task = taskList.find(t => t.id === currentTaskId);
-        document.getElementById('inputTitle').value = task.title;
-        document.getElementById('inputDate').value = task.date;
-        document.getElementById('modalTitle').textContent = "✏️ 編輯項目";
+    window.editFromAdmin = (id) => {
+        currentTaskId = id;
+        const t = taskList.find(x => x.id === id);
+        document.getElementById('inputTitle').value = t.title;
+        document.getElementById('inputDate').value = t.date;
         addModal.classList.remove('hidden');
-        document.getElementById('detailModal').classList.add('hidden');
     };
 
-    function renderAdminTable() {
-        const tbody = document.getElementById('adminTaskTableBody');
-        if(!tbody) return;
-        tbody.innerHTML = taskList.map(t => `
-            <tr class="border-b">
-                <td class="p-3">${t.date}</td><td class="p-3">${t.subject}</td><td class="p-3">${t.title}</td>
-                <td class="p-3"><button onclick="deleteFromTable('${t.id}')" class="text-red-500 font-bold">刪除</button></td>
-            </tr>
-        `).join('');
-    }
-
-    window.deleteFromTable = async (id) => {
+    window.deleteFromAdmin = async (id) => {
         if(confirm("確定刪除？")) {
             await fetch(`/api/tasks?id=${id}`, { method: 'DELETE' });
-            location.reload();
+            refreshData();
         }
     };
 
-    document.getElementById('btnSysMenu').onclick = () => document.getElementById('sysMenuModal').classList.remove('hidden');
-    document.getElementById('btnCloseSysMenu').onclick = () => document.getElementById('sysMenuModal').classList.add('hidden');
-    document.getElementById('btnGoAdmin').onclick = () => { mainAppView.classList.add('hidden'); adminDashboardView.classList.remove('hidden'); };
-    document.getElementById('btnBackToCalendar').onclick = () => { location.reload(); };
+    document.getElementById('btnGoAdmin')?.addEventListener('click', () => {
+        mainAppView.classList.add('hidden');
+        adminDashboardView.classList.remove('hidden');
+    });
+    document.getElementById('btnBackToCalendar')?.addEventListener('click', () => location.reload());
+    document.getElementById('btnSysMenu')?.addEventListener('click', () => document.getElementById('sysMenuModal').classList.remove('hidden'));
+    document.getElementById('btnCloseSysMenu')?.addEventListener('click', () => document.getElementById('sysMenuModal').classList.add('hidden'));
 
     refreshData();
 });
