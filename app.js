@@ -1,15 +1,32 @@
 document.addEventListener('DOMContentLoaded', function() {
     
     // 1. 【身分檢查站】
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlUser = urlParams.get('user');
-    const urlRole = urlParams.get('role');
+  // 替换原有的 mockTasks 和日历初始化逻辑
+let mockTasks = [];
+let calendar;
 
-    if (urlUser && urlRole) {
-        localStorage.setItem('s4c_user', urlUser);
-        localStorage.setItem('s4c_role', urlRole);
-        try { window.history.replaceState({}, document.title, "index.html"); } catch(e){}
+async function loadTasks() {
+    try {
+        const res = await fetch('/api/tasks');
+        mockTasks = await res.json();
+        
+        // SQLite 保存的 boolean 可能是 1/0，转回 true/false
+        mockTasks = mockTasks.map(t => ({ ...t, completed: t.completed === 1 }));
+
+        if (savedRole !== 'admin' && calendarEl) {
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                events: mockTasks,
+                eventClick: (info) => openDetailModalById(info.event.id),
+                eventClassNames: (arg) => arg.event.extendedProps.completed ? ['task-completed'] : []
+            });
+            calendar.render();
+        }
+    } catch (e) {
+        console.error("無法加載數據:", e);
     }
+}
+loadTasks(); // 页面加载时执行
 
     const savedUser = localStorage.getItem('s4c_user');
     const savedRole = localStorage.getItem('s4c_role');
