@@ -1,0 +1,7 @@
+name = "s4c"
+pages_build_output_dir = "."
+
+[[d1_databases]]
+binding = "DB" # 这里的名字必须和代码里的 env.DB 对应
+database_name = "s4c-db" # 你的 D1 数据库名字
+database_id = "9a793beb-51d2-4b30-b6c5-f9823d93f30e"
