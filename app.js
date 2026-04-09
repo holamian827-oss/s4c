@@ -1,128 +1,102 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. 【身分檢查】
     const savedUser = localStorage.getItem('s4c_user');
     const savedRole = localStorage.getItem('s4c_role');
-
-    if (!savedUser || !savedRole) {
-        window.location.href = 'login.html';
-        return; 
-    }
+    if (!savedUser) { window.location.href = 'login.html'; return; }
 
     document.getElementById('navUserInfo').textContent = savedUser;
-    document.getElementById('loadingShield')?.classList.add('hidden');
-
-    // 🔒 權限與視圖控制
-    const btnOpenModal = document.getElementById('btnOpenModal');
-    const btnNavAdminAdd = document.getElementById('btnNavAdminAdd');
-    const btnGoAdmin = document.getElementById('btnGoAdmin');
     const mainAppView = document.getElementById('mainAppView');
     const adminDashboardView = document.getElementById('adminDashboardView');
-    
-    if (savedRole === 'admin') {
-        btnGoAdmin?.classList.remove('hidden');
-        btnNavAdminAdd?.classList.remove('hidden');
-    } else if (savedRole === 'teacher') {
-        btnOpenModal?.classList.remove('hidden');
-    }
 
-    // --- 頁面跳轉 ---
-    btnGoAdmin?.addEventListener('click', () => {
-        mainAppView.classList.add('hidden');
-        adminDashboardView.classList.remove('hidden');
-        renderAdminTaskTable();
-    });
+    // 權限控制
+    if (savedRole === 'admin') document.getElementById('btnGoAdmin').classList.remove('hidden');
+    if (savedRole === 'teacher' || savedRole === 'admin') document.getElementById('btnOpenModal').classList.remove('hidden');
 
-    document.getElementById('btnBackToCalendar')?.addEventListener('click', () => {
-        adminDashboardView.classList.add('hidden');
-        mainAppView.classList.remove('hidden');
-        calendar.render();
-    });
-
-    // ---------------------------------------------------------
-    // 數據持久化邏輯 (使用 LocalStorage 代替 D1)
-    // ---------------------------------------------------------
-    let taskList = JSON.parse(localStorage.getItem('s4c_tasks')) || [
-        { id: '1', title: '物理大測', date: '2026-04-10', type: 'test', subject: '物理', color: '#EF4444', remarks: '第一至三章', completed: false, createdBy: '物理老師' }
-    ];
-
-    function saveToLocal() {
-        localStorage.setItem('s4c_tasks', JSON.stringify(taskList));
-    }
-
+    let taskList = [];
     let calendar;
-    const calendarEl = document.getElementById('calendar');
+    let currentTaskId = null;
 
-    function initCalendar() {
-        if (!calendarEl || savedRole === 'admin') return;
-        calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listMonth' },
-            events: taskList,
-            eventClick: (info) => openDetailModalById(info.event.id),
-            eventClassNames: (arg) => arg.event.extendedProps.completed ? ['task-completed'] : []
-        });
-        calendar.render();
+    async function refreshData() {
+        const res = await fetch('/api/tasks');
+        taskList = await res.json();
+        const events = taskList.map(t => ({ ...t, completed: t.completed === 1 }));
+        
+        if (!calendar && savedRole !== 'admin') {
+            calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+                initialView: 'dayGridMonth',
+                events: events,
+                eventClick: (info) => openDetail(info.event.id)
+            });
+            calendar.render();
+        } else if (calendar) {
+            calendar.removeAllEvents();
+            calendar.addEventSource(events);
+        }
+        if (savedRole === 'admin') renderAdminTable();
+        document.getElementById('loadingShield').classList.add('hidden');
     }
-    initCalendar();
 
-    // --- 新增 / 修改邏輯 ---
-    const addTaskForm = document.getElementById('addTaskForm');
-    let editingTaskId = null;
+    function openDetail(id) {
+        currentTaskId = id;
+        const task = taskList.find(t => t.id === id);
+        document.getElementById('detailTitle').textContent = task.title;
+        document.getElementById('detailInfo').textContent = `${task.date} | ${task.subject || '通用'}`;
+        document.getElementById('detailModal').classList.remove('hidden');
+        document.getElementById('manageActionContainer').classList.toggle('hidden', !(savedRole === 'admin' || savedRole === 'teacher'));
+    }
 
-    addTaskForm?.addEventListener('submit', (e) => {
+    // 刪除邏輯
+    document.getElementById('btnDeleteTask').onclick = async () => {
+        if (!confirm("確定刪除？")) return;
+        await fetch(`/api/tasks?id=${currentTaskId}`, { method: 'DELETE' });
+        location.reload();
+    };
+
+    // 編輯邏輯
+    document.getElementById('btnEditTask').onclick = () => {
+        const task = taskList.find(t => t.id === currentTaskId);
+        document.getElementById('inputTitle').value = task.title;
+        document.getElementById('inputDate').value = task.date;
+        document.getElementById('addModal').classList.remove('hidden');
+        document.getElementById('detailModal').classList.add('hidden');
+    };
+
+    // 儲存邏輯 (新增/修改)
+    document.getElementById('addTaskForm').onsubmit = async (e) => {
         e.preventDefault();
-        const taskData = {
-            id: editingTaskId || String(Date.now()),
+        const data = {
+            id: currentTaskId || String(Date.now()),
             title: document.getElementById('inputTitle').value,
             date: document.getElementById('inputDate').value,
             type: document.getElementById('inputType').value,
             subject: document.getElementById('inputSubject').value,
             remarks: document.getElementById('inputRemarks').value,
-            url: document.getElementById('inputUrl').value,
-            color: document.getElementById('inputType').value === 'test' ? '#EF4444' : '#3B82F6',
-            completed: false,
-            createdBy: savedUser
+            createdBy: savedUser,
+            completed: 0
         };
-
-        if (editingTaskId) {
-            const index = taskList.findIndex(t => t.id === editingTaskId);
-            taskList[index] = taskData;
-        } else {
-            taskList.push(taskData);
-        }
-
-        saveToLocal();
-        alert("✅ 已儲存！");
-        window.location.reload(); 
-    });
-
-    // --- 刪除邏輯 ---
-    window.deleteTaskFromAdmin = function(id) {
-        if (confirm("⚠️ 確定要刪除嗎？")) {
-            taskList = taskList.filter(t => t.id !== id);
-            saveToLocal();
-            renderAdminTaskTable();
-            if(calendar) window.location.reload();
-        }
+        await fetch('/api/tasks', { method: 'POST', body: JSON.stringify(data) });
+        location.reload();
     };
 
-    // --- 管理員表格渲染 ---
-    function renderAdminTaskTable() {
+    function renderAdminTable() {
         const tbody = document.getElementById('adminTaskTableBody');
-        if (!tbody) return;
-        tbody.innerHTML = taskList.map(task => `
-            <tr class="border-b hover:bg-gray-50">
-                <td class="p-3">${task.date}</td>
-                <td class="p-3">${task.type}</td>
-                <td class="p-3">${task.subject}</td>
-                <td class="p-3 font-semibold">${task.title}</td>
-                <td class="p-3 text-center">
-                    <button class="text-red-600 font-bold" onclick="deleteTaskFromAdmin('${task.id}')">刪除</button>
-                </td>
+        tbody.innerHTML = taskList.map(t => `
+            <tr class="border-b">
+                <td class="p-3">${t.date}</td><td class="p-3">${t.subject}</td><td class="p-3">${t.title}</td>
+                <td class="p-3"><button onclick="deleteFromTable('${t.id}')" class="text-red-500">刪除</button></td>
             </tr>
         `).join('');
     }
 
-    // 登出
-    document.querySelector('a[href="login.html"]')?.addEventListener('click', () => localStorage.clear());
+    window.deleteFromTable = async (id) => {
+        if(confirm("確定刪除此項目？")) {
+            await fetch(`/api/tasks?id=${id}`, { method: 'DELETE' });
+            location.reload();
+        }
+    };
+
+    document.getElementById('btnGoAdmin').onclick = () => { mainAppView.classList.add('hidden'); adminDashboardView.classList.remove('hidden'); };
+    document.getElementById('btnBackToCalendar').onclick = () => { location.reload(); };
+    document.getElementById('btnOpenModal').onclick = () => { currentTaskId = null; document.getElementById('addTaskForm').reset(); document.getElementById('addModal').classList.remove('hidden'); };
+
+    refreshData();
 });
