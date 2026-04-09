@@ -1,22 +1,20 @@
 export async function onRequestPost({ request, env }) {
-    try {
-        const { username, password, role } = await request.json();
-        
-        // 這裡的變量 DB 必須與你 Cloudflare Pages 后台綁定的 Variable Name 完全一致
-        const user = await env.DB.prepare(
-            "SELECT * FROM users WHERE username = ? AND password = ? AND role = ?"
-        ).bind(username, password, role).first();
+    const { username, password, role } = await request.json();
+    const user = await env.DB.prepare("SELECT * FROM users WHERE username = ? AND password = ? AND role = ?")
+        .bind(username, password, role).first();
 
-        if (user) {
-            return Response.json({ 
-                success: true, 
-                user: user.username, 
-                role: user.role 
-            });
+    if (!user) return Response.json({ success: false, message: "帐号或密码错误" }, { status: 401 });
+
+    // 检查封号状态
+    if (user.banned_until) {
+        if (user.banned_until === "permanent") {
+            return Response.json({ success: false, message: "🚫 你的帳號已被永久封禁" }, { status: 403 });
         }
-        return Response.json({ success: false, message: "帳號或密碼錯誤" }, { status: 401 });
-    } catch (e) {
-        return Response.json({ success: false, error: "數據庫連線失敗: " + e.message }, { status: 500 });
+        const expire = new Date(user.banned_until);
+        if (expire > new Date()) {
+            return Response.json({ success: false, message: `⏳ 帳號封禁中，解封時間：${expire.toLocaleString()}` }, { status: 403 });
+        }
     }
-}
 
+    return Response.json({ success: true, user: username, role: role });
+}
