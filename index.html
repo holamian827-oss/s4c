@@ -24,6 +24,7 @@
     <nav class="bg-blue-700 text-white p-4 shadow-md flex justify-between items-center relative z-10">
         <h1 class="text-2xl font-bold tracking-wider text-white px-3 py-1 rounded inline-block bg-blue-700">S4C</h1>
         <div class="flex gap-3 items-center">
+            <button id="btnGoAdmin" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm transition font-bold shadow hidden">⚙️ 進入後台管理</button>
             <button id="btnNavAdminAdd" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm transition font-bold shadow hidden">＋ 新增項目</button>
             <span id="navUserInfo" class="text-sm font-bold text-blue-100">驗證中...</span>
             <button id="btnFeedback" class="bg-blue-800 hover:bg-blue-900 px-3 py-1 rounded text-sm transition border border-blue-400">💡 意見反饋</button>
@@ -39,8 +40,8 @@
                 <option value="all">所有類型</option><option value="homework">功課</option><option value="test">測驗</option><option value="notice">通告回條</option><option value="event">學校活動</option>
             </select>
             <select id="filterSubject" class="border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none bg-gray-50">
-                <option value="all">所有科目</option><option value="中文">中文</option><option value="英文">英文</option><option value="數學 (班主任)">數學 (含附加數學)</option><option value="物理">物理</option><option value="化學">化學</option><option value="生物">生物</option><option value="資訊科技">資訊科技 (含STEM)</option><option value="歷史">歷史</option><option value="地理">地理</option><option value="音樂">音樂</option><option value="視藝">視藝</option>
-                <option value="宗教與公民">宗教與公民</option> </select>
+                <option value="all">所有科目</option><option value="中文">中文</option><option value="英文">英文</option><option value="數學 (班主任)">數學 (含附加數學)</option><option value="物理">物理</option><option value="化學">化學</option><option value="生物">生物</option><option value="資訊科技">資訊科技 (含STEM)</option><option value="歷史">歷史</option><option value="地理">地理</option><option value="音樂">音樂</option><option value="視藝">視藝</option><option value="宗教與公民">宗教與公民</option>
+            </select>
             <button id="applyFilter" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded transition font-medium shadow-sm">套用篩選</button>
             <button id="btnOpenModal" class="ml-auto bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded transition font-bold shadow-sm hidden">＋ 新增項目</button>
         </div>
@@ -48,39 +49,68 @@
     </main>
 
     <main id="adminDashboardView" class="container mx-auto mt-6 p-4 hidden flex-grow max-w-7xl">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2 text-center lg:text-left">🛡️ 系統管理後台</h2>
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="bg-white p-6 rounded-lg shadow border-t-4 border-blue-500 flex flex-col h-[550px]">
-                <h3 class="text-lg font-bold mb-4 text-gray-700 sticky top-0 bg-white">⏱️ 最近登入帳號</h3>
-                <div class="overflow-y-auto flex-grow pr-2 hide-scrollbar"><ul id="adminLoginLog" class="space-y-3 text-sm"></ul></div>
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <h2 class="text-3xl font-bold text-gray-800">🛡️ 系統管理中心</h2>
+            <button id="btnBackToCalendar" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded font-bold shadow transition">🔙 返回日曆視圖</button>
+        </div>
+
+        <div class="flex gap-4 mb-6">
+            <button class="admin-tab-btn bg-purple-600 text-white px-4 py-2 rounded font-bold shadow" data-target="adminTabOverview">📊 儀表盤</button>
+            <button class="admin-tab-btn bg-white text-gray-600 border px-4 py-2 rounded font-bold hover:bg-gray-50" data-target="adminTabTasks">📋 所有項目管理</button>
+            <button class="admin-tab-btn bg-white text-gray-600 border px-4 py-2 rounded font-bold hover:bg-gray-50" data-target="adminTabUsers">👥 學生帳號管理</button>
+        </div>
+
+        <div id="adminTabOverview" class="admin-tab-content grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-lg shadow border-t-4 border-blue-500 flex flex-col h-[400px]">
+                <h3 class="text-lg font-bold mb-4 text-gray-700 sticky top-0 bg-white">⏱️ 最近登入日誌</h3>
+                <div class="overflow-y-auto flex-grow pr-2 hide-scrollbar"><ul id="adminLoginLog" class="space-y-3 text-sm"><li class="text-gray-500">暫無數據</li></ul></div>
             </div>
-            <div class="bg-white p-6 rounded-lg shadow border-t-4 border-green-500 flex flex-col h-[550px]">
-                <h3 class="text-lg font-bold mb-4 text-gray-700 sticky top-0 bg-white">📋 近期新增項目</h3>
-                <div class="overflow-y-auto flex-grow pr-2 hide-scrollbar"><ul id="adminAuditLog" class="space-y-4 text-sm"></ul></div>
+            <div class="bg-white p-6 rounded-lg shadow border-t-4 border-green-500 flex flex-col h-[400px]">
+                <h3 class="text-lg font-bold mb-4 text-gray-700 sticky top-0 bg-white">📝 近期系統動態</h3>
+                <div class="overflow-y-auto flex-grow pr-2 hide-scrollbar"><ul id="adminAuditLog" class="space-y-4 text-sm"><li class="text-gray-500">暫無數據</li></ul></div>
             </div>
-            <div class="bg-white p-6 rounded-lg shadow border-t-4 border-red-500 flex flex-col h-[550px]">
-                <h3 class="text-lg font-bold mb-4 text-gray-700">🔑 學生帳號管理</h3>
-                <div class="mb-6">
-                    <label class="block text-sm font-semibold text-gray-600 mb-2">選擇學生帳號：</label>
-                    <select id="adminStudentSelect" class="w-full border border-gray-300 p-2 rounded outline-none focus:ring-2 focus:ring-red-400 bg-gray-50">
-                        <option value="">-- 請選擇學號 --</option>
-                        <option value="15_同學">15_同學</option>
-                        <option value="22_同學">22_同學</option>
-                        <option value="33_同學">33_同學</option>
-                    </select>
+        </div>
+
+        <div id="adminTabTasks" class="admin-tab-content hidden bg-white p-6 rounded-lg shadow border-t-4 border-purple-500">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-700">📋 系統所有項目 (清單模式)</h3>
+                <button id="btnAdminListAdd" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm font-bold shadow">＋ 新增項目</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-700 text-sm">
+                            <th class="p-3 border-b">日期</th>
+                            <th class="p-3 border-b">類型</th>
+                            <th class="p-3 border-b">科目</th>
+                            <th class="p-3 border-b">標題</th>
+                            <th class="p-3 border-b text-center">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminTaskTableBody" class="text-sm">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="adminTabUsers" class="admin-tab-content hidden bg-white p-6 rounded-lg shadow border-t-4 border-red-500">
+            <h3 class="text-lg font-bold mb-4 text-gray-700">🔑 學生帳號權限與安全</h3>
+            <div class="mb-6 max-w-md">
+                <label class="block text-sm font-semibold text-gray-600 mb-2">選擇學生帳號：</label>
+                <select id="adminStudentSelect" class="w-full border border-gray-300 p-2 rounded outline-none focus:ring-2 focus:ring-red-400 bg-gray-50">
+                    <option value="">-- 請選擇學號 --</option>
+                    <option value="15_同學">15_同學</option>
+                    <option value="22_同學">22_同學</option>
+                    <option value="33_同學">33_同學</option>
+                </select>
+            </div>
+            <div id="adminStudentPanel" class="hidden flex-col gap-6 max-w-md">
+                <div class="flex gap-3">
+                    <button id="btnAdminResetPwd" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded font-bold shadow transition">🔄 重設為預設密碼</button>
+                    <button id="btnAdminSuspend" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded font-bold shadow transition">🚫 停用帳號</button>
                 </div>
-                <div id="adminStudentPanel" class="hidden flex-col gap-6">
-                    <div class="bg-gray-50 p-4 rounded border">
-                        <p class="text-sm text-gray-600 mb-1">最近一次登入時間：</p>
-                        <p id="adminStudentLastLogin" class="font-bold text-gray-800">2026-04-07 14:20</p>
-                    </div>
-                    <div class="flex flex-col gap-3">
-                        <button id="btnAdminResetPwd" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded font-bold shadow transition">🔄 重設密碼</button>
-                        <button id="btnAdminSuspend" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded font-bold shadow transition">🚫 暫時停用</button>
-                    </div>
-                </div>
-                <div id="adminStudentEmptyMsg" class="text-center text-gray-400 mt-10">請從上方選擇一個學生以進行操作</div>
             </div>
+            <div id="adminStudentEmptyMsg" class="text-gray-400 mt-4 italic">請從上方選擇一個學生以進行操作...</div>
         </div>
     </main>
 
@@ -90,20 +120,14 @@
             <h2 class="text-xl font-bold mb-4 text-blue-700 border-b pb-2">ℹ️ 系統資訊</h2>
             <div class="flex flex-col gap-2 mb-4">
                 <button class="sys-tab-btn w-full text-left p-3 bg-blue-50 text-blue-700 font-bold rounded border border-blue-200" data-target="tabNotes">⚠️ 注意事項</button>
-                <button class="sys-tab-btn w-full text-left p-3 bg-gray-50 text-gray-700 font-bold rounded border border-gray-200" data-target="tabPwd">🔑 更改我的密碼</button>
                 <button class="sys-tab-btn w-full text-left p-3 bg-gray-50 text-gray-700 font-bold rounded border border-gray-200" data-target="tabAbout">ℹ️ 關於此應用</button>
             </div>
             <div class="flex-grow overflow-y-auto relative">
                 <div id="tabNotes" class="sys-tab-content block">
                     <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
                         <ul class="list-disc ml-5 text-sm text-gray-700 space-y-2">
-                            <li>嚴禁將個人帳號密碼分享給他人。</li><li>科代表請確保資料準確後才發布項目。</li><li>如有發現亂加項目者，系統會記錄操作人。</li>
+                            <li>嚴禁將個人帳號密碼分享給他人。</li><li>科代表請確保資料準確後才發布項目。</li>
                         </ul>
-                    </div>
-                </div>
-                <div id="tabPwd" class="sys-tab-content hidden">
-                    <div class="bg-gray-50 p-6 rounded border text-center mt-2">
-                        <button id="btnChangeMyPwd" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded">立即更改密碼</button>
                     </div>
                 </div>
                 <div id="tabAbout" class="sys-tab-content hidden h-full flex flex-col">
@@ -111,14 +135,10 @@
                         <h3 class="font-bold text-gray-700 mb-2">🔄 版本歷程</h3>
                         <div class="text-sm text-gray-600 space-y-3">
                             <div>
-                                <p class="font-bold text-blue-600">v0.5.1 (beta)</p>
-                                <ul class="list-disc ml-4"><li>新增修改與刪除項目功能。</li><li>優化 URL 輸入，自動補全網址。</li><li>支援一人多科權限設計與公告預留。</li></ul>
+                                <p class="font-bold text-blue-600">v1.0.0 (Cloudflare D1 版本)</p>
+                                <ul class="list-disc ml-4"><li>新增完整的後台管理面板。</li><li>對接 D1 數據庫實現數據持久化。</li></ul>
                             </div>
                         </div>
-                    </div>
-                    <div class="border-t pt-3">
-                        <h3 class="font-bold text-gray-800 text-sm mb-1">👨‍💻 開發人員名單</h3>
-                        <p class="text-xs text-gray-600 font-medium leading-relaxed">代碼開發與版面設計：羅珏俊<br>環境部署及維護：李嘉宏</p>
                     </div>
                 </div>
             </div>
@@ -134,12 +154,8 @@
                 <div><label class="block text-sm font-semibold text-gray-700 mb-1">🔗 相關連結 (選填)</label><input type="text" id="inputUrl" placeholder="例如：classroom.google.com" class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-blue-400 text-sm"></div>
                 <div class="flex gap-2">
                     <div class="w-1/2"><label class="block text-sm font-semibold text-gray-700 mb-1">類型</label><select id="inputType" class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50"><option value="homework">功課</option><option value="test">測驗</option><option value="notice">通告</option><option value="event">活動</option></select></div>
-                    <div class="w-1/2"><label class="block text-sm font-semibold text-gray-700 mb-1">科目</label><select id="inputSubject" class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50">
-                        <option value="none">無</option><option value="中文">中文</option><option value="英文">英文</option><option value="數學 (班主任)">數學</option><option value="物理">物理</option><option value="化學">化學</option><option value="生物">生物</option><option value="資訊科技">資訊科技</option><option value="歷史">歷史</option><option value="地理">地理</option><option value="音樂">音樂</option><option value="視藝">視藝</option>
-                        <option value="宗教與公民">宗教與公民</option>
-                    </select></div>
+                    <div class="w-1/2"><label class="block text-sm font-semibold text-gray-700 mb-1">科目</label><select id="inputSubject" class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50"><option value="none">無</option><option value="中文">中文</option><option value="英文">英文</option><option value="數學 (班主任)">數學</option><option value="物理">物理</option><option value="化學">化學</option><option value="生物">生物</option><option value="資訊科技">資訊科技</option><option value="歷史">歷史</option><option value="地理">地理</option><option value="音樂">音樂</option><option value="視藝">視藝</option><option value="宗教與公民">宗教與公民</option></select></div>
                 </div>
-                <div id="testImportanceContainer" class="hidden"><label class="block text-sm font-semibold text-gray-700 mb-1">重要程度</label><select id="inputImportance" class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50"><option value="小測">小測</option><option value="大測">大測</option><option value="考試">考試</option></select></div>
                 <div><label class="block text-sm font-semibold text-gray-700 mb-1">日期</label><input type="date" id="inputDate" required class="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-blue-400"></div>
                 <div class="flex justify-end gap-2 mt-2 pt-4 border-t">
                     <button type="button" id="btnCloseModal" class="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded">取消</button>
