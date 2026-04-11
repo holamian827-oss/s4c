@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 renderCalendar(taskList);
             } else {
                 renderAdminAuditLog();
-                loadAdminUsers(); // 💡 登入記錄和学生名单都在这里统一渲染
+                loadAdminUsers();
             }
             document.getElementById('loadingShield').classList.add('hidden');
         } catch (e) {
@@ -239,25 +239,16 @@ document.addEventListener('DOMContentLoaded', function() {
         loadData();
     });
 
-
-    // --- 智能登入日誌渲染 (防爆破 + 24小時自動過期) ---
     function renderLoginLogs() {
         const ul = document.getElementById('adminLoginLog');
         if (!ul) return;
 
-        // 1. 篩選出有登入過的人
         let activeUsers = adminUserList.filter(u => u.last_login);
-        
-        // 2. 依照時間排序 (最新的排最上面)
         activeUsers.sort((a, b) => new Date(b.last_login) - new Date(a.last_login));
 
         const now = new Date().getTime();
         const oneDay = 24 * 60 * 60 * 1000;
-
-        // 3. 24 小時快取過濾：只顯示一天內登入的人，實現自動清空！
         activeUsers = activeUsers.filter(u => (now - new Date(u.last_login).getTime()) < oneDay);
-
-        // 4. 極限防護：如果真的有超過 50 個人登入，只顯示最新的 50 個，防止卡頓
         activeUsers = activeUsers.slice(0, 50);
 
         if (activeUsers.length === 0) {
@@ -266,7 +257,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         ul.innerHTML = activeUsers.map(u => {
-            const timeDiff = Math.floor((now - new Date(u.last_login).getTime()) / 60000); // 計算相差的分鐘數
+            const timeDiff = Math.floor((now - new Date(u.last_login).getTime()) / 60000);
             let timeStr = "";
             if (timeDiff < 5) timeStr = "剛剛";
             else if (timeDiff < 60) timeStr = `${timeDiff} 分鐘前`;
@@ -312,7 +303,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     .map(u => `<option value="${u.username}">${u.username}</option>`).join('');
             }
             
-            // 💡 獲取數據後，同步渲染三個面板
             renderBannedList();
             renderLoginLogs();
         } catch(e) { console.error(e); }
@@ -411,6 +401,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if(adminSelect && adminSelect.value === targetUsername) adminSelect.dispatchEvent(new Event('change'));
     }
 
+    // 💡 直接讀取下拉選單的值，並只有一個單純的防呆確認
     document.getElementById('btnAdminSuspend')?.addEventListener('click', () => {
         const u = adminSelect?.value;
         if(!u) return;
@@ -418,7 +409,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const durationValue = document.getElementById('banDurationSelect').value;
         const durationText = durationValue === '1d' ? '1 天' : '永久';
         
-        if(confirm(`⚠️ 確定要【${durationText}】停用 ${u} 嗎？\n\n(停用後該學生將無法登入系統)`)) {
+        if(confirm(`🛑 確定要【${durationText}】停用 ${u} 嗎？\n\n(停用後該學生將無法登入系統)`)) {
             setBanStatus(u, durationValue);
         }
     });
