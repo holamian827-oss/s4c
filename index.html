@@ -46,44 +46,45 @@
     <main id="adminDashboardView" class="container mx-auto mt-6 p-4 hidden flex-grow max-w-7xl">
         <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2 text-center lg:text-left">🛡️ 系統管理後台</h2>
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="bg-white p-6 rounded-lg shadow border-t-4 border-blue-500 flex flex-col h-[550px]">
+            <div class="bg-white p-6 rounded-lg shadow border-t-4 border-blue-500 flex flex-col h-[650px]">
                 <h3 class="text-lg font-bold mb-4 text-gray-700 sticky top-0 bg-white">⏱️ 最近登入帳號</h3>
                 <div class="overflow-y-auto flex-grow pr-2 hide-scrollbar">
-                    <ul id="adminLoginLog" class="space-y-3 text-sm">
-                        </ul>
+                    <ul id="adminLoginLog" class="space-y-3 text-sm"></ul>
                 </div>
             </div>
-            <div class="bg-white p-6 rounded-lg shadow border-t-4 border-green-500 flex flex-col h-[550px]">
+            <div class="bg-white p-6 rounded-lg shadow border-t-4 border-green-500 flex flex-col h-[650px]">
                 <h3 class="text-lg font-bold mb-4 text-gray-700 sticky top-0 bg-white">📋 近期新增項目</h3>
                 <div class="overflow-y-auto flex-grow pr-2 hide-scrollbar"><ul id="adminAuditLog" class="space-y-4 text-sm"></ul></div>
             </div>
             
-            <div class="bg-white p-6 rounded-lg shadow border-t-4 border-red-500 flex flex-col h-[550px]">
-                <h3 class="text-lg font-bold mb-4 text-gray-700 sticky top-0 bg-white">🔑 學生帳號管理</h3>
+            <div class="bg-white p-6 rounded-lg shadow border-t-4 border-red-500 flex flex-col h-[650px]">
+                <h3 class="text-lg font-bold mb-5 text-gray-700 sticky top-0 bg-white">🔑 學生帳號管理</h3>
                 
-                <div class="mb-3">
-                    <select id="adminStudentSelect" class="w-full border p-2 rounded bg-gray-50 focus:ring-2 focus:ring-red-400 outline-none transition">
-                        <option value="">-- 載入中 --</option>
+                <div class="mb-5">
+                    <select id="adminStudentSelect" class="w-full border-2 border-gray-200 p-3 rounded-lg bg-gray-50 focus:border-red-400 focus:bg-white outline-none transition text-base">
+                        <option value="">-- 請選擇要管理的學號 --</option>
                     </select>
                 </div>
                 
-                <div id="adminStudentPanel" class="hidden flex-col gap-2 mb-4 p-3 bg-gray-50 rounded border border-gray-200 shadow-inner">
-                    <div class="flex justify-between items-center mb-1">
-                        <span id="adminSelectedStudentName" class="font-bold text-gray-800"></span>
-                        <span id="adminStudentStatus" class="text-sm"></span>
+                <div id="adminStudentPanel" class="hidden flex-col gap-5 mb-6 p-5 bg-white rounded-xl border border-gray-200 shadow-sm">
+                    <div class="flex justify-between items-center pb-3 border-b border-gray-100">
+                        <span id="adminSelectedStudentName" class="text-xl font-bold text-gray-800"></span>
+                        <span id="adminStudentStatus" class="px-3 py-1 rounded-full text-sm font-bold"></span>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button id="btnAdminSuspend1D" class="bg-orange-500 hover:bg-orange-600 text-white py-2 rounded text-sm font-bold shadow transition">🚫 停用 1 天</button>
-                        <button id="btnAdminSuspendPerm" class="bg-red-600 hover:bg-red-700 text-white py-2 rounded text-sm font-bold shadow transition">🛑 永久停用</button>
-                    </div>
-                    <button id="btnAdminUnban" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded text-sm font-bold shadow transition hidden mt-1">✅ 立即解封</button>
-                    <button id="btnAdminResetPwd" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded text-sm font-bold shadow transition mt-1">🔄 重設為預設密碼</button>
+                    
+                    <button id="btnAdminResetPwd" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-base font-bold shadow-sm transition">
+                        🔄 重設為預設密碼
+                    </button>
+                    
+                    <button id="btnAdminSuspend" class="w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg text-base font-bold shadow-sm transition">
+                        🛑 停用此帳號
+                    </button>
                 </div>
 
-                <h3 class="text-md font-bold text-red-600 border-t pt-4 mb-3">🚫 目前停用名單</h3>
+                <h3 class="text-md font-bold text-red-600 border-t pt-5 mb-4">🚫 目前停用名單</h3>
                 <div class="overflow-y-auto flex-grow pr-2 hide-scrollbar">
-                    <ul id="adminBannedList" class="space-y-2 text-sm">
-                        <li class="text-gray-400 text-center mt-4">目前沒有被停用的帳號</li>
+                    <ul id="adminBannedList" class="space-y-3">
+                        <li class="text-gray-400 text-center mt-6">目前沒有被停用的帳號</li>
                     </ul>
                 </div>
             </div>
@@ -96,10 +97,7 @@
             <form id="feedbackForm" class="flex flex-col gap-4">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">反饋類型</label>
-                    <select id="feedbackType" class="w-full border p-2 rounded bg-gray-50">
-                        <option value="改進建議">改進建議</option>
-                        <option value="bug反饋">Bug 反饋</option>
-                    </select>
+                    <select id="feedbackType" class="w-full border p-2 rounded bg-gray-50"><option value="改進建議">改進建議</option><option value="bug反饋">Bug 反饋</option></select>
                 </div>
                 <div id="feedbackImageContainer" class="hidden">
                     <label class="block text-sm font-semibold text-gray-700 mb-1">上傳圖片 (Bug 截圖)</label>
@@ -125,7 +123,7 @@
                 <div id="tabNotes" class="sys-tab-content block"><div class="bg-yellow-50 p-3 rounded"><ul class="list-disc ml-5 text-sm text-gray-700 space-y-2"><li>嚴禁將密碼分享。</li><li>科代表請確保資料準確。</li></ul></div></div>
                 <div id="tabPwd" class="sys-tab-content hidden"><div class="bg-gray-50 p-6 rounded border text-center mt-2"><button id="btnChangeMyPwd" class="w-full bg-blue-600 text-white font-bold py-2 rounded">立即更改密碼</button></div></div>
                 <div id="tabAbout" class="sys-tab-content hidden h-full flex flex-col">
-                    <div class="bg-gray-50 border p-3 rounded flex-grow mb-3 text-sm text-gray-600">v0.5.3 (beta)<br>修正 Admin 名稱、反饋上傳及登出問題。</div>
+                    <div class="bg-gray-50 border p-3 rounded flex-grow mb-3 text-sm text-gray-600">v0.6.0<br>管理員面板 UI 全新優化</div>
                     <div class="border-t pt-3"><h3 class="font-bold text-gray-800 text-sm">👨‍💻 開發名單</h3><p class="text-xs text-gray-600">開發設計：羅珏俊<br>環境部署：李嘉宏</p></div>
                 </div>
             </div>
@@ -167,6 +165,6 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=3"></script>
 </body>
 </html>
