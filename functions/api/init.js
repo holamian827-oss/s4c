@@ -1,6 +1,13 @@
+// 密碼加密函數 (SHA-256)
+async function hashPassword(password) {
+    const msgBuffer = new TextEncoder().encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export async function onRequestGet({ env }) {
     try {
-        // 1. 创建用户表
         await env.DB.prepare(`
             CREATE TABLE IF NOT EXISTS users (
                 username TEXT PRIMARY KEY,
@@ -10,13 +17,9 @@ export async function onRequestGet({ env }) {
             )
         `).run();
 
-        // 💡 确保有 banned_until 字段 (旧补丁)
         try { await env.DB.prepare("ALTER TABLE users ADD COLUMN banned_until TEXT").run(); } catch (e) {}
-        
-        // 💡 新增：给数据库加上记录登入时间的字段！
         try { await env.DB.prepare("ALTER TABLE users ADD COLUMN last_login TEXT").run(); } catch (e) {}
 
-        // 2. 创建任务表
         await env.DB.prepare(`
             CREATE TABLE IF NOT EXISTS tasks (
                 id TEXT PRIMARY KEY,
@@ -32,25 +35,26 @@ export async function onRequestGet({ env }) {
             )
         `).run();
 
-        // 3. 准备初始数据
         let stmts = [];
-        // 管理员
-        stmts.push(env.DB.prepare("INSERT OR REPLACE INTO users VALUES (?,?,?,?)").bind('admin', 'Admin1234', 'admin', ''));
+        // 提前將預設密碼轉換為哈希值
+        const adminHash = await hashPassword('Admin1234');
+        const defaultHash = await hashPassword('12345678');
+
+        // 🚨 修復點：VALUES 裡面改成 5 個問號，並補上最後一個參數 null (last_login)
+        stmts.push(env.DB.prepare("INSERT OR REPLACE INTO users VALUES (?,?,?,?,?)").bind('admin', adminHash, 'admin', '', null));
         
-        // 老师们
-        const teachers = ['班主任', '中文老師', '英文老師', '物理老師', '化學老師', '資訊科技老師'];
+        const teachers = ['班主任', '中文老師', '英文老師', '物理老師', '化學老師', '生物老師', '資訊科技老師', '歷史老師', '地理老師', '音樂老師', '視藝老師', '宗教老師'];
         teachers.forEach(t => {
-            stmts.push(env.DB.prepare("INSERT OR REPLACE INTO users VALUES (?,?,?,?)").bind(t, '12345678', 'teacher', ''));
+            stmts.push(env.DB.prepare("INSERT OR REPLACE INTO users VALUES (?,?,?,?,?)").bind(t, defaultHash, 'teacher', '', null));
         });
 
-        // 1-35 号同学
         for (let i = 1; i <= 35; i++) {
-            stmts.push(env.DB.prepare("INSERT OR REPLACE INTO users VALUES (?,?,?,?)").bind(`${i}_同學`, '12345678', 'student', ''));
+            stmts.push(env.DB.prepare("INSERT OR REPLACE INTO users VALUES (?,?,?,?,?)").bind(`${i}_同學`, defaultHash, 'student', '', null));
         }
 
         await env.DB.batch(stmts);
-        return new Response("✅ 数据库地基已铺好！登入记录字段已更新。", { status: 200 });
+        return new Response("✅ 數據庫補丁已安裝，所有密碼已轉換為哈希值！", { status: 200 });
     } catch (e) {
-        return new Response("❌ 初始化失败: " + e.message, { status: 500 });
+        return new Response("❌ 初始化失敗: " + e.message, { status: 500 });
     }
 }
