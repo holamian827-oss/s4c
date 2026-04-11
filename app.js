@@ -239,16 +239,24 @@ document.addEventListener('DOMContentLoaded', function() {
         loadData();
     });
 
+    // 💡 真實數據：讀取 last_login 並計算時間差，過期 24 小時自動消失
     function renderLoginLogs() {
         const ul = document.getElementById('adminLoginLog');
         if (!ul) return;
 
+        // 篩選出有登入過的人
         let activeUsers = adminUserList.filter(u => u.last_login);
+        
+        // 依照時間排序 (最新的排最上面)
         activeUsers.sort((a, b) => new Date(b.last_login) - new Date(a.last_login));
 
         const now = new Date().getTime();
         const oneDay = 24 * 60 * 60 * 1000;
+        
+        // 過濾掉超過 24 小時沒登入的人
         activeUsers = activeUsers.filter(u => (now - new Date(u.last_login).getTime()) < oneDay);
+        
+        // 最多顯示 50 個人
         activeUsers = activeUsers.slice(0, 50);
 
         if (activeUsers.length === 0) {
@@ -303,6 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     .map(u => `<option value="${u.username}">${u.username}</option>`).join('');
             }
             
+            // 💡 同步渲染小黑屋和真實登入日誌
             renderBannedList();
             renderLoginLogs();
         } catch(e) { console.error(e); }
@@ -401,14 +410,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if(adminSelect && adminSelect.value === targetUsername) adminSelect.dispatchEvent(new Event('change'));
     }
 
-    // 💡 直接讀取下拉選單的值，並只有一個單純的防呆確認
     document.getElementById('btnAdminSuspend')?.addEventListener('click', () => {
         const u = adminSelect?.value;
         if(!u) return;
-        
         const durationValue = document.getElementById('banDurationSelect').value;
         const durationText = durationValue === '1d' ? '1 天' : '永久';
-        
         if(confirm(`🛑 確定要【${durationText}】停用 ${u} 嗎？\n\n(停用後該學生將無法登入系統)`)) {
             setBanStatus(u, durationValue);
         }
