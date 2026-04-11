@@ -1,6 +1,13 @@
+// 密码加密函数 (SHA-256)
+async function hashPassword(password) {
+    const msgBuffer = new TextEncoder().encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export async function onRequestGet({ env }) {
     try {
-        // 1. 创建用户表 (增加 banned_until 字段)
         await env.DB.prepare(`
             CREATE TABLE IF NOT EXISTS users (
                 username TEXT PRIMARY KEY,
@@ -10,7 +17,6 @@ export async function onRequestGet({ env }) {
             )
         `).run();
 
-        // 2. 创建任务表 (确保有 url 和 remarks)
         await env.DB.prepare(`
             CREATE TABLE IF NOT EXISTS tasks (
                 id TEXT PRIMARY KEY,
@@ -26,24 +32,28 @@ export async function onRequestGet({ env }) {
             )
         `).run();
 
-        // 3. 准备初始数据
         let stmts = [];
+        
+        // 提前生成默认密码的密文
+        const adminHash = await hashPassword('Admin1234');
+        const defaultHash = await hashPassword('12345678');
+
         // 管理员
-        stmts.push(env.DB.prepare("INSERT OR REPLACE INTO users VALUES (?,?,?,?)").bind('admin', 'Admin1234', 'admin', ''));
+        stmts.push(env.DB.prepare("INSERT OR REPLACE INTO users VALUES (?,?,?,?)").bind('admin', adminHash, 'admin', ''));
         
         // 老师们
-        const teachers = ['班主任', '中文老師', '英文老師', '物理老師', '化學老師', '資訊科技老師'];
+        const teachers = ['班主任', '中文老师', '英文老师', '物理老师', '化学老师', '生物老师', '资讯科技老师', '历史老师', '地理老师', '音乐老师', '视艺老师', '宗教老师'];
         teachers.forEach(t => {
-            stmts.push(env.DB.prepare("INSERT OR REPLACE INTO users VALUES (?,?,?,?)").bind(t, '12345678', 'teacher', ''));
+            stmts.push(env.DB.prepare("INSERT OR REPLACE INTO users VALUES (?,?,?,?)").bind(t, defaultHash, 'teacher', ''));
         });
 
         // 1-35 号同学
         for (let i = 1; i <= 35; i++) {
-            stmts.push(env.DB.prepare("INSERT OR REPLACE INTO users VALUES (?,?,?,?)").bind(`${i}_同學`, '12345678', 'student', ''));
+            stmts.push(env.DB.prepare("INSERT OR REPLACE INTO users VALUES (?,?,?,?)").bind(`${i}_同学`, defaultHash, 'student', ''));
         }
 
         await env.DB.batch(stmts);
-        return new Response("✅ 数据库地基已铺好！1-35号和老师已就位。", { status: 200 });
+        return new Response("✅ 数据库地基已铺好！所有密码已成功加密并初始化。", { status: 200 });
     } catch (e) {
         return new Response("❌ 初始化失败: " + e.message, { status: 500 });
     }
