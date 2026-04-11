@@ -109,8 +109,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 renderCalendar(taskList);
             } else {
                 renderAdminAuditLog();
-                loadAdminUsers();
-                renderLoginLogs();
+                loadAdminUsers(); // 💡 登入記錄和学生名单都在这里统一渲染
             }
             document.getElementById('loadingShield').classList.add('hidden');
         } catch (e) {
@@ -240,15 +239,45 @@ document.addEventListener('DOMContentLoaded', function() {
         loadData();
     });
 
-    // --- 7. 全新設計的寬敞管理員面板 ---
+
+    // --- 智能登入日誌渲染 (防爆破 + 24小時自動過期) ---
     function renderLoginLogs() {
         const ul = document.getElementById('adminLoginLog');
         if (!ul) return;
-        const mockLogins = [{ user: '22_同學', time: '剛剛' }, { user: '物理老師', time: '15 分鐘前' }];
-        ul.innerHTML = mockLogins.map(l => `
-            <li class="flex justify-between border-b pb-2">
-                <span class="font-bold text-blue-600">${l.user}</span><span class="text-gray-400 text-xs">${l.time}</span>
-            </li>`).join('');
+
+        // 1. 篩選出有登入過的人
+        let activeUsers = adminUserList.filter(u => u.last_login);
+        
+        // 2. 依照時間排序 (最新的排最上面)
+        activeUsers.sort((a, b) => new Date(b.last_login) - new Date(a.last_login));
+
+        const now = new Date().getTime();
+        const oneDay = 24 * 60 * 60 * 1000;
+
+        // 3. 24 小時快取過濾：只顯示一天內登入的人，實現自動清空！
+        activeUsers = activeUsers.filter(u => (now - new Date(u.last_login).getTime()) < oneDay);
+
+        // 4. 極限防護：如果真的有超過 50 個人登入，只顯示最新的 50 個，防止卡頓
+        activeUsers = activeUsers.slice(0, 50);
+
+        if (activeUsers.length === 0) {
+            ul.innerHTML = '<li class="text-gray-400 text-center py-6 bg-gray-50 rounded-lg border border-dashed">近 24 小時內無人登入 😴</li>';
+            return;
+        }
+
+        ul.innerHTML = activeUsers.map(u => {
+            const timeDiff = Math.floor((now - new Date(u.last_login).getTime()) / 60000); // 計算相差的分鐘數
+            let timeStr = "";
+            if (timeDiff < 5) timeStr = "剛剛";
+            else if (timeDiff < 60) timeStr = `${timeDiff} 分鐘前`;
+            else timeStr = `${Math.floor(timeDiff/60)} 小時前`;
+
+            return `
+                <li class="flex justify-between items-center bg-white p-3 rounded-lg border border-blue-100 shadow-sm mb-2 hover:bg-blue-50 transition">
+                    <span class="font-bold text-blue-700">${u.username}</span>
+                    <span class="text-gray-500 text-xs font-semibold bg-gray-100 px-3 py-1 rounded-full">${timeStr}</span>
+                </li>`;
+        }).join('');
     }
 
     function renderAdminAuditLog() {
@@ -258,7 +287,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <li class="border-b pb-3">
                 <div class="flex justify-between items-start mb-1">
                     <span class="font-bold text-gray-800">${log.title}</span>
-                    <button class="bg-gray-100 px-2 py-1 rounded text-xs font-bold" onclick="document.dispatchEvent(new CustomEvent('openTaskDetail', {detail: '${log.id}'}))">查看</button>
+                    <button class="bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-xs font-bold transition" onclick="document.dispatchEvent(new CustomEvent('openTaskDetail', {detail: '${log.id}'}))">查看</button>
                 </div>
             </li>`).join('');
     }
@@ -282,11 +311,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     adminUserList.filter(u => u.role === 'student')
                     .map(u => `<option value="${u.username}">${u.username}</option>`).join('');
             }
+            
+            // 💡 獲取數據後，同步渲染三個面板
             renderBannedList();
+            renderLoginLogs();
         } catch(e) { console.error(e); }
     }
 
-    // 專屬解封區 (小黑屋列表)
     function renderBannedList() {
         const ul = document.getElementById('adminBannedList');
         if (!ul) return;
@@ -301,7 +332,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const isPerm = u.banned_until === 'permanent';
             const statusStr = isPerm ? '🛑 永久停用' : '⏳ 停用 1 天';
             return `
-                <li class="flex justify-between items-center bg-white p-4 rounded-xl border border-red-100 shadow-sm mb-3">
+                <li class="flex justify-between items-center bg-white p-4 rounded-xl border border-red-100 shadow-sm mb-3 hover:bg-red-50 transition">
                     <div>
                         <span class="font-bold text-gray-800 text-lg">${u.username}</span>
                         <div class="text-sm mt-1 text-red-500 font-medium">${statusStr}</div>
@@ -314,7 +345,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }).join('');
     }
 
-    // 下拉選單與兩顆按鈕的聯動
     const adminSelect = document.getElementById('adminStudentSelect');
     if(adminSelect) {
         adminSelect.addEventListener('change', (e) => {
@@ -338,8 +368,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const statusEl = document.getElementById('adminStudentStatus');
             const btnBan = document.getElementById('btnAdminSuspend');
+            const banSelect = document.getElementById('banDurationSelect');
 
-            // 判斷狀態，如果已被封號，將封號按鈕反灰
             if(uInfo.banned_until) {
                 if(statusEl) {
                     statusEl.textContent = uInfo.banned_until === 'permanent' ? '🛑 狀態：永久停用' : '⚠️ 狀態：停用中';
@@ -347,9 +377,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 if(btnBan) {
                     btnBan.disabled = true;
-                    btnBan.className = "w-full bg-gray-300 text-gray-500 py-3 rounded-lg text-base font-bold cursor-not-allowed";
-                    btnBan.textContent = "此帳號已停用 (請在下方列表解封)";
+                    btnBan.className = "w-2/3 bg-gray-300 text-gray-500 py-3 rounded-lg text-base font-bold cursor-not-allowed";
+                    btnBan.textContent = "已停用 (請在列表解封)";
                 }
+                if(banSelect) banSelect.disabled = true;
             } else {
                 if(statusEl) {
                     statusEl.textContent = '✅ 狀態：正常';
@@ -357,9 +388,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 if(btnBan) {
                     btnBan.disabled = false;
-                    btnBan.className = "w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg text-base font-bold shadow-md transition";
+                    btnBan.className = "w-2/3 bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg text-base font-bold shadow-sm transition";
                     btnBan.innerHTML = "🛑 停用此帳號";
                 }
+                if(banSelect) banSelect.disabled = false;
             }
         });
     }
@@ -379,25 +411,22 @@ document.addEventListener('DOMContentLoaded', function() {
         if(adminSelect && adminSelect.value === targetUsername) adminSelect.dispatchEvent(new Event('change'));
     }
 
-    // 將封號選項整合到單一按鈕，並利用 prompt 彈出選擇
     document.getElementById('btnAdminSuspend')?.addEventListener('click', () => {
         const u = adminSelect?.value;
         if(!u) return;
         
-        const days = prompt(`⚠️ 你要停用 ${u} 多久？\n\n輸入 1 = 停用 1 天\n輸入 0 = 永久停用`, "1");
-        if(days === null) return; // 按下取消
+        const durationValue = document.getElementById('banDurationSelect').value;
+        const durationText = durationValue === '1d' ? '1 天' : '永久';
         
-        if(days === "1") setBanStatus(u, '1d');
-        else if(days === "0") setBanStatus(u, 'perm');
-        else alert("❌ 無效的輸入！請輸入 1 或 0。");
+        if(confirm(`⚠️ 確定要【${durationText}】停用 ${u} 嗎？\n\n(停用後該學生將無法登入系統)`)) {
+            setBanStatus(u, durationValue);
+        }
     });
 
-    // 專屬的小黑屋解封監聽
     document.addEventListener('quickUnban', (e) => {
-        if(confirm(`確定要解除 ${e.detail} 的停用狀態嗎？`)) setBanStatus(e.detail, '');
+        if(confirm(`✅ 確定要解除 ${e.detail} 的停用狀態嗎？`)) setBanStatus(e.detail, '');
     });
 
-    // 重設密碼邏輯
     document.getElementById('btnAdminResetPwd')?.addEventListener('click', async () => {
         const targetUser = adminSelect?.value;
         if (!targetUser) return alert("請先選擇一位學生！");
