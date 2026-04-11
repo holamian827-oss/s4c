@@ -8,6 +8,7 @@ async function hashPassword(password) {
 
 export async function onRequestGet({ env }) {
     try {
+        // 1. 尝试建表 (针对全新部署)
         await env.DB.prepare(`
             CREATE TABLE IF NOT EXISTS users (
                 username TEXT PRIMARY KEY,
@@ -17,6 +18,14 @@ export async function onRequestGet({ env }) {
             )
         `).run();
 
+        // 💡 修复核心：如果表里只有 3 列，强制新增 banned_until 列！
+        try {
+            await env.DB.prepare("ALTER TABLE users ADD COLUMN banned_until TEXT").run();
+        } catch (e) {
+            // 如果报错，说明这列已经存在了，直接忽略即可，不影响运行
+        }
+
+        // 2. 创建任务表
         await env.DB.prepare(`
             CREATE TABLE IF NOT EXISTS tasks (
                 id TEXT PRIMARY KEY,
@@ -32,6 +41,7 @@ export async function onRequestGet({ env }) {
             )
         `).run();
 
+        // 3. 准备初始数据
         let stmts = [];
         
         // 提前生成默认密码的密文
@@ -49,11 +59,11 @@ export async function onRequestGet({ env }) {
 
         // 1-35 号同学
         for (let i = 1; i <= 35; i++) {
-            stmts.push(env.DB.prepare("INSERT OR REPLACE INTO users VALUES (?,?,?,?)").bind(`${i}_同学`, defaultHash, 'student', ''));
+            stmts.push(env.DB.prepare("INSERT OR REPLACE INTO users VALUES (?,?,?,?)").bind(`${i}_同學`, defaultHash, 'student', ''));
         }
 
         await env.DB.batch(stmts);
-        return new Response("✅ 数据库地基已铺好！所有密码已成功加密并初始化。", { status: 200 });
+        return new Response("✅ 数据库修复完毕！新增了字段，所有密码已成功加密并初始化。", { status: 200 });
     } catch (e) {
         return new Response("❌ 初始化失败: " + e.message, { status: 500 });
     }
