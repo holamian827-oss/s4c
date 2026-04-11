@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (savedRole === 'teacher') btnOpenModal.classList.remove('hidden');
     }
 
-    // --- 3. 系統菜單 (Tab 設計) ---
+    // --- 3. 系統菜單 ---
     const sysMenuModal = document.getElementById('sysMenuModal');
     const sysTabBtns = document.querySelectorAll('.sys-tab-btn');
     const sysTabContents = document.querySelectorAll('.sys-tab-content');
@@ -58,13 +58,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 登出
     document.getElementById('btnLogout')?.addEventListener('click', () => {
         localStorage.clear();
         window.location.href = 'login.html';
     });
 
-    // 更改密碼 (對接 API)
     document.getElementById('btnChangeMyPwd')?.addEventListener('click', async () => {
         const oldP = prompt("請輸入您的目前密碼：");
         const newP = prompt("請輸入新密碼 (最少 6 個字元)：");
@@ -106,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('feedbackForm').reset();
     });
 
-    // --- 4. 核心數據獲取 (對接 API) ---
+    // --- 4. 核心數據獲取 ---
     async function loadData() {
         try {
             const res = await fetch('/api/tasks');
@@ -129,11 +127,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- 5. 日曆與篩選 ---
     function renderCalendar(dataToRender) {
         const events = dataToRender.map(t => ({
-            id: t.id, 
-            title: t.title, 
-            start: t.date, 
-            color: t.color || (t.type === 'test' ? '#EF4444' : '#3B82F6'), 
-            extendedProps: t
+            id: t.id, title: t.title, start: t.date, 
+            color: t.color || (t.type === 'test' ? '#EF4444' : '#3B82F6'), extendedProps: t
         }));
 
         const calendarEl = document.getElementById('calendar');
@@ -163,7 +158,7 @@ document.addEventListener('DOMContentLoaded', function() {
         renderCalendar(filteredTasks);
     });
 
-    // --- 6. 項目操作 (新增/修改/刪除/詳情) ---
+    // --- 6. 項目操作 ---
     function openDetailModalById(id) {
         const task = taskList.find(t => t.id === id);
         if(!task) return;
@@ -176,8 +171,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const urlContainer = document.getElementById('detailUrlContainer');
         if(task.url) { 
-            urlContainer.classList.remove('hidden'); 
-            document.getElementById('detailUrl').href = task.url; 
+            urlContainer.classList.remove('hidden'); document.getElementById('detailUrl').href = task.url; 
         } else { 
             urlContainer.classList.add('hidden'); 
         }
@@ -190,16 +184,14 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btnCloseDetailX').onclick = () => document.getElementById('detailModal').classList.add('hidden');
     document.getElementById('btnCloseDetailBtn').onclick = () => document.getElementById('detailModal').classList.add('hidden');
 
-    // 刪除 (對接 API)
     document.getElementById('btnDeleteTask')?.addEventListener('click', async () => {
         if(confirm("⚠️ 確定要刪除此項目嗎？")) {
             await fetch(`/api/tasks?id=${currentTaskId}`, { method: 'DELETE' });
             document.getElementById('detailModal').classList.add('hidden');
-            loadData(); // 重刷資料
+            loadData();
         }
     });
 
-    // 修改
     document.getElementById('btnEditTask')?.addEventListener('click', () => {
         const task = taskList.find(t => t.id === currentTaskId);
         if(!task) return;
@@ -216,7 +208,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('addModal').classList.remove('hidden');
     });
 
-    // 開啟新增
     const openAddModal = () => {
         editingTaskId = null; 
         document.getElementById('modalTitle').textContent = "📝 發佈項目";
@@ -227,15 +218,13 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btnNavAdminAdd')?.addEventListener('click', openAddModal);
     document.getElementById('btnCloseModal').onclick = () => document.getElementById('addModal').classList.add('hidden');
 
-    // 儲存項目 (對接 API)
     document.getElementById('addTaskForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btnSubmitTask');
-        btn.textContent = "儲存中..."; 
-        btn.disabled = true;
+        btn.textContent = "儲存中..."; btn.disabled = true;
 
         let urlInput = document.getElementById('inputUrl').value.trim();
-        if (urlInput && !/^https?:\/\//i.test(urlInput)) urlInput = 'https://' + urlInput; // 智能補全
+        if (urlInput && !/^https?:\/\//i.test(urlInput)) urlInput = 'https://' + urlInput;
 
         const title = document.getElementById('inputTitle').value;
         const type = document.getElementById('inputType').value;
@@ -244,43 +233,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const taskData = {
             id: editingTaskId || String(Date.now()),
-            title: fullTitle, 
-            date: document.getElementById('inputDate').value,
-            type: type, 
-            subject: document.getElementById('inputSubject').value,
-            remarks: document.getElementById('inputRemarks').value,
-            url: urlInput, 
-            color: type === 'test' ? '#EF4444' : '#3B82F6', 
-            completed: 0, 
-            createdBy: rawUser
+            title: fullTitle, date: document.getElementById('inputDate').value,
+            type: type, subject: document.getElementById('inputSubject').value,
+            remarks: document.getElementById('inputRemarks').value, url: urlInput, 
+            color: type === 'test' ? '#EF4444' : '#3B82F6', completed: 0, createdBy: rawUser
         };
 
-        await fetch('/api/tasks', { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify(taskData) 
-        });
+        await fetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(taskData) });
         
         document.getElementById('addModal').classList.add('hidden');
-        btn.textContent = "儲存"; 
-        btn.disabled = false;
+        btn.textContent = "儲存"; btn.disabled = false;
         document.getElementById('addTaskForm').reset();
         loadData();
     });
 
-    // --- 7. 管理員後台 (對接 API) ---
+    // --- 7. 管理員防崩潰面板 ---
     function renderLoginLogs() {
         const ul = document.getElementById('adminLoginLog');
         if (!ul) return;
-        const mockLogins = [
-            { user: '22_同學', time: '剛剛' },
-            { user: '物理老師', time: '15 分鐘前' },
-            { user: '15_同學', time: '1 小時前' }
-        ];
+        const mockLogins = [{ user: '22_同學', time: '剛剛' }, { user: '物理老師', time: '15 分鐘前' }];
         ul.innerHTML = mockLogins.map(l => `
             <li class="flex justify-between border-b pb-2">
-                <span class="font-bold text-blue-600">${l.user}</span>
-                <span class="text-gray-400 text-xs">${l.time}</span>
+                <span class="font-bold text-blue-600">${l.user}</span><span class="text-gray-400 text-xs">${l.time}</span>
             </li>`).join('');
     }
 
@@ -293,22 +267,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span class="font-bold text-gray-800">${log.title}</span>
                     <button class="bg-gray-100 px-2 py-1 rounded text-xs font-bold" onclick="document.dispatchEvent(new CustomEvent('openTaskDetail', {detail: '${log.id}'}))">查看</button>
                 </div>
-                <div class="text-xs text-gray-500 flex gap-2">
-                    <span class="bg-blue-100 text-blue-700 px-1 rounded">${log.createdBy || '系統'}</span>
-                    <span>${log.date}</span>
-                </div>
             </li>`).join('');
     }
     
     document.addEventListener('openTaskDetail', (e) => openDetailModalById(e.detail));
 
-    // 加載帳號數據與排序
     async function loadAdminUsers() {
         try {
             const res = await fetch('/api/admin/users');
             const rawUsers = await res.json();
             
-            // 讓學號按照數字大小排序 (1, 2... 35)
             adminUserList = rawUsers.sort((a, b) => {
                 const numA = parseInt(a.username.split('_')[0]) || 0;
                 const numB = parseInt(b.username.split('_')[0]) || 0;
@@ -321,55 +289,52 @@ document.addEventListener('DOMContentLoaded', function() {
                     adminUserList.filter(u => u.role === 'student')
                     .map(u => `<option value="${u.username}">${u.username}</option>`).join('');
             }
-            
             renderBannedList();
-        } catch(e) {
-            console.error(e);
-        }
+        } catch(e) { console.error(e); }
     }
 
-    // 渲染小黑屋列表
     function renderBannedList() {
         const ul = document.getElementById('adminBannedList');
         if (!ul) return;
-
         const bannedUsers = adminUserList.filter(u => u.banned_until);
-
         if (bannedUsers.length === 0) {
             ul.innerHTML = '<li class="text-gray-400 text-center mt-4">目前沒有被停用的帳號</li>';
             return;
         }
-
         ul.innerHTML = bannedUsers.map(u => {
             const isPerm = u.banned_until === 'permanent';
             const statusBadge = isPerm ? '<span class="bg-red-100 text-red-700 px-1 rounded">永久</span>' : '<span class="bg-orange-100 text-orange-700 px-1 rounded">1天</span>';
             return `
                 <li class="flex justify-between items-center bg-red-50 p-2 rounded border border-red-100">
-                    <div>
-                        <span class="font-bold text-gray-800">${u.username}</span>
-                        <div class="text-xs mt-1">${statusBadge}</div>
-                    </div>
-                    <button class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs font-bold shadow transition" 
-                        onclick="document.dispatchEvent(new CustomEvent('quickUnban', {detail: '${u.username}'}))">解封</button>
+                    <div><span class="font-bold text-gray-800">${u.username}</span><div class="text-xs mt-1">${statusBadge}</div></div>
+                    <button class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs font-bold" onclick="document.dispatchEvent(new CustomEvent('quickUnban', {detail: '${u.username}'}))">解封</button>
                 </li>`;
         }).join('');
     }
 
-    // 監聽下拉選單
     const adminSelect = document.getElementById('adminStudentSelect');
     if(adminSelect) {
         adminSelect.addEventListener('change', (e) => {
             const targetUser = e.target.value;
             const panel = document.getElementById('adminStudentPanel');
+            const msg = document.getElementById('adminStudentEmptyMsg'); // 兼容舊版HTML，不再報錯！
             
             if(!targetUser) { 
-                panel.classList.add('hidden'); panel.classList.remove('flex'); 
+                panel?.classList.add('hidden'); 
+                panel?.classList.remove('flex'); 
+                msg?.classList.remove('hidden'); 
                 return; 
             }
             
             const uInfo = adminUserList.find(u => u.username === targetUser);
-            panel.classList.remove('hidden'); panel.classList.add('flex');
-            document.getElementById('adminSelectedStudentName').textContent = targetUser;
+            if(!uInfo) return;
+
+            msg?.classList.add('hidden'); 
+            panel?.classList.remove('hidden'); 
+            panel?.classList.add('flex');
+            
+            const nameEl = document.getElementById('adminSelectedStudentName');
+            if(nameEl) nameEl.textContent = targetUser;
             
             const statusEl = document.getElementById('adminStudentStatus');
             const btnUnban = document.getElementById('btnAdminUnban');
@@ -377,45 +342,49 @@ document.addEventListener('DOMContentLoaded', function() {
             const btnSusPerm = document.getElementById('btnAdminSuspendPerm');
 
             if(uInfo.banned_until) {
-                statusEl.textContent = uInfo.banned_until === 'permanent' ? '🛑 永久停用' : '⚠️ 停用中';
-                statusEl.className = 'text-sm font-bold text-red-600';
-                btnUnban.classList.remove('hidden'); btnSus1D.classList.add('hidden'); btnSusPerm.classList.add('hidden');
+                if(statusEl) {
+                    statusEl.textContent = uInfo.banned_until === 'permanent' ? '🛑 永久停用' : '⚠️ 停用中';
+                    statusEl.className = 'text-sm font-bold text-red-600';
+                }
+                btnUnban?.classList.remove('hidden'); 
+                btnSus1D?.classList.add('hidden'); 
+                btnSusPerm?.classList.add('hidden');
             } else {
-                statusEl.textContent = '✅ 正常';
-                statusEl.className = 'text-sm font-bold text-green-600';
-                btnUnban.classList.add('hidden'); btnSus1D.classList.remove('hidden'); btnSusPerm.classList.remove('hidden');
+                if(statusEl) {
+                    statusEl.textContent = '✅ 正常';
+                    statusEl.className = 'text-sm font-bold text-green-600';
+                }
+                btnUnban?.classList.add('hidden'); 
+                btnSus1D?.classList.remove('hidden'); 
+                btnSusPerm?.classList.remove('hidden');
             }
         });
     }
 
-    // 停用/解封 API 通訊
     async function setBanStatus(targetUsername, duration) {
         if(!targetUsername) return;
         let until = "";
         if (duration === '1d') { 
             const d = new Date(); d.setDate(d.getDate()+1); until = d.toISOString(); 
-        } else if (duration === 'perm') {
-            until = 'permanent';
-        }
+        } else if (duration === 'perm') { until = 'permanent'; }
+        
         await fetch('/api/admin/user-status', { 
             method: 'POST', headers: {'Content-Type':'application/json'}, 
             body: JSON.stringify({ username: targetUsername, bannedUntil: until }) 
         });
         await loadAdminUsers();
-        if(adminSelect.value === targetUsername) adminSelect.dispatchEvent(new Event('change'));
+        if(adminSelect && adminSelect.value === targetUsername) adminSelect.dispatchEvent(new Event('change'));
     }
 
-    // 綁定封鎖與解封按鈕
-    document.getElementById('btnAdminSuspend1D')?.addEventListener('click', () => setBanStatus(adminSelect.value, '1d'));
-    document.getElementById('btnAdminSuspendPerm')?.addEventListener('click', () => setBanStatus(adminSelect.value, 'perm'));
-    document.getElementById('btnAdminUnban')?.addEventListener('click', () => setBanStatus(adminSelect.value, ''));
+    document.getElementById('btnAdminSuspend1D')?.addEventListener('click', () => setBanStatus(adminSelect?.value, '1d'));
+    document.getElementById('btnAdminSuspendPerm')?.addEventListener('click', () => setBanStatus(adminSelect?.value, 'perm'));
+    document.getElementById('btnAdminUnban')?.addEventListener('click', () => setBanStatus(adminSelect?.value, ''));
     document.addEventListener('quickUnban', (e) => {
         if(confirm(`確定要解除 ${e.detail} 的停用狀態嗎？`)) setBanStatus(e.detail, '');
     });
 
-    // 綁定重設密碼按鈕
     document.getElementById('btnAdminResetPwd')?.addEventListener('click', async () => {
-        const targetUser = adminSelect.value;
+        const targetUser = adminSelect?.value;
         if (!targetUser) return alert("請先選擇一位學生！");
 
         if (confirm(`⚠️ 確定要將 ${targetUser} 的密碼重設為預設密碼 (12345678) 嗎？`)) {
@@ -425,17 +394,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     body: JSON.stringify({ username: targetUser })
                 });
                 const data = await res.json();
-                if (data.success) {
-                    alert(`✅ 成功！${targetUser} 的密碼已恢復為 12345678`);
-                } else {
-                    alert(`❌ 重設失敗：${data.message}`);
-                }
-            } catch (e) {
-                alert("❌ 連接伺服器失敗，請檢查網路");
-            }
+                if (data.success) alert(`✅ 成功！${targetUser} 的密碼已恢復為 12345678`);
+                else alert(`❌ 重設失敗：${data.message}`);
+            } catch (e) { alert("❌ 連接伺服器失敗，請檢查網路"); }
         }
     });
 
-    // 啟動加載資料
     loadData();
 });
