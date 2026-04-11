@@ -57,19 +57,35 @@
                 <h3 class="text-lg font-bold mb-4 text-gray-700 sticky top-0 bg-white">📋 近期新增項目</h3>
                 <div class="overflow-y-auto flex-grow pr-2 hide-scrollbar"><ul id="adminAuditLog" class="space-y-4 text-sm"></ul></div>
             </div>
+            
             <div class="bg-white p-6 rounded-lg shadow border-t-4 border-red-500 flex flex-col h-[550px]">
-                <h3 class="text-lg font-bold mb-4 text-gray-700">🔑 學生帳號管理</h3>
-                <div class="mb-6"><select id="adminStudentSelect" class="w-full border p-2 rounded bg-gray-50"><option value="">-- 載入中 --</option></select></div>
-                <div id="adminStudentPanel" class="hidden flex-col gap-6">
-                    <div class="bg-gray-50 p-4 rounded border"><p class="text-sm text-gray-600 mb-1">最近登入時間：</p><p id="adminStudentLastLogin" class="font-bold text-gray-800">2026-04-07 14:20</p></div>
-                    <div class="flex flex-col gap-3">
-                        <button id="btnAdminResetPwd" class="w-full bg-yellow-500 text-white py-3 rounded font-bold shadow">🔄 重設密碼</button>
-                        <button id="btnAdminSuspend1D" class="w-full bg-orange-500 text-white py-3 rounded font-bold shadow">🚫 停用 1 天</button>
-                        <button id="btnAdminSuspendPerm" class="w-full bg-red-600 text-white py-3 rounded font-bold shadow">🚫 永久停用</button>
-                        <button id="btnAdminUnban" class="w-full bg-green-500 text-white py-3 rounded font-bold shadow hidden">✅ 解除停用</button>
-                    </div>
+                <h3 class="text-lg font-bold mb-4 text-gray-700 sticky top-0 bg-white">🔑 學生帳號管理</h3>
+                
+                <div class="mb-3">
+                    <select id="adminStudentSelect" class="w-full border p-2 rounded bg-gray-50 focus:ring-2 focus:ring-red-400 outline-none transition">
+                        <option value="">-- 載入中 --</option>
+                    </select>
                 </div>
-                <div id="adminStudentEmptyMsg" class="text-center text-gray-400 mt-10">請從上方選擇一個學生</div>
+                
+                <div id="adminStudentPanel" class="hidden flex-col gap-2 mb-4 p-3 bg-gray-50 rounded border border-gray-200 shadow-inner">
+                    <div class="flex justify-between items-center mb-1">
+                        <span id="adminSelectedStudentName" class="font-bold text-gray-800"></span>
+                        <span id="adminStudentStatus" class="text-sm"></span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="btnAdminSuspend1D" class="bg-orange-500 hover:bg-orange-600 text-white py-2 rounded text-sm font-bold shadow transition">🚫 停用 1 天</button>
+                        <button id="btnAdminSuspendPerm" class="bg-red-600 hover:bg-red-700 text-white py-2 rounded text-sm font-bold shadow transition">🛑 永久停用</button>
+                    </div>
+                    <button id="btnAdminUnban" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded text-sm font-bold shadow transition hidden mt-1">✅ 立即解封</button>
+                    <button id="btnAdminResetPwd" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded text-sm font-bold shadow transition mt-1">🔄 重設為預設密碼</button>
+                </div>
+
+                <h3 class="text-md font-bold text-red-600 border-t pt-4 mb-3">🚫 目前停用名單</h3>
+                <div class="overflow-y-auto flex-grow pr-2 hide-scrollbar">
+                    <ul id="adminBannedList" class="space-y-2 text-sm">
+                        <li class="text-gray-400 text-center mt-4">目前沒有被停用的帳號</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </main>
