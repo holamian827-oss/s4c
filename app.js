@@ -7,7 +7,6 @@ let adminUserList = [];
 
 document.addEventListener('DOMContentLoaded', function() {
     
-    // --- 1. 身分檢查 ---
     const rawUser = localStorage.getItem('s4c_user');
     const savedRole = localStorage.getItem('s4c_role');
     const savedUser = (savedRole === 'admin') ? '系統管理員' : rawUser;
@@ -20,7 +19,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('navUserInfo').textContent = `${savedUser}`;
     document.getElementById('loadingShield').classList.add('hidden');
 
-    // --- 2. 權限與視圖控制 ---
     const mainAppView = document.getElementById('mainAppView');
     const adminDashboardView = document.getElementById('adminDashboardView');
     const btnNavAdminAdd = document.getElementById('btnNavAdminAdd');
@@ -34,7 +32,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (savedRole === 'teacher') btnOpenModal.classList.remove('hidden');
     }
 
-    // --- 3. 系統菜單 ---
     const sysMenuModal = document.getElementById('sysMenuModal');
     const sysTabBtns = document.querySelectorAll('.sys-tab-btn');
     const sysTabContents = document.querySelectorAll('.sys-tab-content');
@@ -83,7 +80,6 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch(e) { alert("連接伺服器失敗！"); }
     });
 
-    // 意見反饋
     const feedbackModal = document.getElementById('feedbackModal');
     const feedbackType = document.getElementById('feedbackType');
     const feedbackImageContainer = document.getElementById('feedbackImageContainer');
@@ -104,7 +100,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('feedbackForm').reset();
     });
 
-    // --- 4. 核心數據獲取 ---
     async function loadData() {
         try {
             const res = await fetch('/api/tasks');
@@ -124,7 +119,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // --- 5. 日曆與篩選 ---
     function renderCalendar(dataToRender) {
         const events = dataToRender.map(t => ({
             id: t.id, title: t.title, start: t.date, 
@@ -158,7 +152,6 @@ document.addEventListener('DOMContentLoaded', function() {
         renderCalendar(filteredTasks);
     });
 
-    // --- 6. 項目操作 ---
     function openDetailModalById(id) {
         const task = taskList.find(t => t.id === id);
         if(!task) return;
@@ -247,7 +240,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loadData();
     });
 
-    // --- 7. 管理員防崩潰面板 ---
+    // --- 7. 全新設計的寬敞管理員面板 ---
     function renderLoginLogs() {
         const ul = document.getElementById('adminLoginLog');
         if (!ul) return;
@@ -293,43 +286,50 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch(e) { console.error(e); }
     }
 
+    // 專屬解封區 (小黑屋列表)
     function renderBannedList() {
         const ul = document.getElementById('adminBannedList');
         if (!ul) return;
         const bannedUsers = adminUserList.filter(u => u.banned_until);
+        
         if (bannedUsers.length === 0) {
-            ul.innerHTML = '<li class="text-gray-400 text-center mt-4">目前沒有被停用的帳號</li>';
+            ul.innerHTML = '<li class="text-gray-400 text-center py-6 bg-gray-50 rounded-lg border border-dashed">目前沒有被停用的帳號 🎉</li>';
             return;
         }
+        
         ul.innerHTML = bannedUsers.map(u => {
             const isPerm = u.banned_until === 'permanent';
-            const statusBadge = isPerm ? '<span class="bg-red-100 text-red-700 px-1 rounded">永久</span>' : '<span class="bg-orange-100 text-orange-700 px-1 rounded">1天</span>';
+            const statusStr = isPerm ? '🛑 永久停用' : '⏳ 停用 1 天';
             return `
-                <li class="flex justify-between items-center bg-red-50 p-2 rounded border border-red-100">
-                    <div><span class="font-bold text-gray-800">${u.username}</span><div class="text-xs mt-1">${statusBadge}</div></div>
-                    <button class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs font-bold" onclick="document.dispatchEvent(new CustomEvent('quickUnban', {detail: '${u.username}'}))">解封</button>
+                <li class="flex justify-between items-center bg-white p-4 rounded-xl border border-red-100 shadow-sm mb-3">
+                    <div>
+                        <span class="font-bold text-gray-800 text-lg">${u.username}</span>
+                        <div class="text-sm mt-1 text-red-500 font-medium">${statusStr}</div>
+                    </div>
+                    <button class="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-sm transition" 
+                        onclick="document.dispatchEvent(new CustomEvent('quickUnban', {detail: '${u.username}'}))">
+                        ✅ 解除停用
+                    </button>
                 </li>`;
         }).join('');
     }
 
+    // 下拉選單與兩顆按鈕的聯動
     const adminSelect = document.getElementById('adminStudentSelect');
     if(adminSelect) {
         adminSelect.addEventListener('change', (e) => {
             const targetUser = e.target.value;
             const panel = document.getElementById('adminStudentPanel');
-            const msg = document.getElementById('adminStudentEmptyMsg'); // 兼容舊版HTML，不再報錯！
             
             if(!targetUser) { 
                 panel?.classList.add('hidden'); 
                 panel?.classList.remove('flex'); 
-                msg?.classList.remove('hidden'); 
                 return; 
             }
             
             const uInfo = adminUserList.find(u => u.username === targetUser);
             if(!uInfo) return;
 
-            msg?.classList.add('hidden'); 
             panel?.classList.remove('hidden'); 
             panel?.classList.add('flex');
             
@@ -337,26 +337,29 @@ document.addEventListener('DOMContentLoaded', function() {
             if(nameEl) nameEl.textContent = targetUser;
             
             const statusEl = document.getElementById('adminStudentStatus');
-            const btnUnban = document.getElementById('btnAdminUnban');
-            const btnSus1D = document.getElementById('btnAdminSuspend1D');
-            const btnSusPerm = document.getElementById('btnAdminSuspendPerm');
+            const btnBan = document.getElementById('btnAdminSuspend');
 
+            // 判斷狀態，如果已被封號，將封號按鈕反灰
             if(uInfo.banned_until) {
                 if(statusEl) {
-                    statusEl.textContent = uInfo.banned_until === 'permanent' ? '🛑 永久停用' : '⚠️ 停用中';
-                    statusEl.className = 'text-sm font-bold text-red-600';
+                    statusEl.textContent = uInfo.banned_until === 'permanent' ? '🛑 狀態：永久停用' : '⚠️ 狀態：停用中';
+                    statusEl.className = 'px-3 py-1 rounded-full text-sm font-bold bg-red-100 text-red-700';
                 }
-                btnUnban?.classList.remove('hidden'); 
-                btnSus1D?.classList.add('hidden'); 
-                btnSusPerm?.classList.add('hidden');
+                if(btnBan) {
+                    btnBan.disabled = true;
+                    btnBan.className = "w-full bg-gray-300 text-gray-500 py-3 rounded-lg text-base font-bold cursor-not-allowed";
+                    btnBan.textContent = "此帳號已停用 (請在下方列表解封)";
+                }
             } else {
                 if(statusEl) {
-                    statusEl.textContent = '✅ 正常';
-                    statusEl.className = 'text-sm font-bold text-green-600';
+                    statusEl.textContent = '✅ 狀態：正常';
+                    statusEl.className = 'px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-700';
                 }
-                btnUnban?.classList.add('hidden'); 
-                btnSus1D?.classList.remove('hidden'); 
-                btnSusPerm?.classList.remove('hidden');
+                if(btnBan) {
+                    btnBan.disabled = false;
+                    btnBan.className = "w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg text-base font-bold shadow-md transition";
+                    btnBan.innerHTML = "🛑 停用此帳號";
+                }
             }
         });
     }
@@ -376,13 +379,25 @@ document.addEventListener('DOMContentLoaded', function() {
         if(adminSelect && adminSelect.value === targetUsername) adminSelect.dispatchEvent(new Event('change'));
     }
 
-    document.getElementById('btnAdminSuspend1D')?.addEventListener('click', () => setBanStatus(adminSelect?.value, '1d'));
-    document.getElementById('btnAdminSuspendPerm')?.addEventListener('click', () => setBanStatus(adminSelect?.value, 'perm'));
-    document.getElementById('btnAdminUnban')?.addEventListener('click', () => setBanStatus(adminSelect?.value, ''));
+    // 將封號選項整合到單一按鈕，並利用 prompt 彈出選擇
+    document.getElementById('btnAdminSuspend')?.addEventListener('click', () => {
+        const u = adminSelect?.value;
+        if(!u) return;
+        
+        const days = prompt(`⚠️ 你要停用 ${u} 多久？\n\n輸入 1 = 停用 1 天\n輸入 0 = 永久停用`, "1");
+        if(days === null) return; // 按下取消
+        
+        if(days === "1") setBanStatus(u, '1d');
+        else if(days === "0") setBanStatus(u, 'perm');
+        else alert("❌ 無效的輸入！請輸入 1 或 0。");
+    });
+
+    // 專屬的小黑屋解封監聽
     document.addEventListener('quickUnban', (e) => {
         if(confirm(`確定要解除 ${e.detail} 的停用狀態嗎？`)) setBanStatus(e.detail, '');
     });
 
+    // 重設密碼邏輯
     document.getElementById('btnAdminResetPwd')?.addEventListener('click', async () => {
         const targetUser = adminSelect?.value;
         if (!targetUser) return alert("請先選擇一位學生！");
