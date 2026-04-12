@@ -106,10 +106,13 @@ document.addEventListener('DOMContentLoaded', function() {
             color: t.color || (t.type === 'test' ? '#EF4444' : '#3B82F6'), 
             extendedProps: t
         }));
-
-        if (!calendar) {
+    if (!calendar) {
             calendar = new FullCalendar.Calendar(el, {
                 initialView: 'dayGridMonth',
+                // 👇 加入下面呢兩行，補回 Header 按鈕同埋按鈕中文名 👇
+                headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listMonth' },
+                buttonText: { month: '日曆模式', listMonth: '列表模式' },
+                // 👆 補回結束 👆
                 events: events,
                 eventClick: (info) => openDetailModalById(info.event.id)
             });
