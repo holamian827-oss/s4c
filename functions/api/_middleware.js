@@ -17,24 +17,34 @@ export async function onRequest(context) {
     
     if (!user || !user.token_created_at) return new Response("Session Expired", { status: 401 });
 
-    // 💡 伺服器端 Token 過期判定 (設定為 24 小時)
     const tokenCreatedTime = new Date(user.token_created_at).getTime();
     const currentTime = new Date().getTime();
     const sessionDuration = 24 * 60 * 60 * 1000; // 24小時的毫秒數
+    const tokenAge = currentTime - tokenCreatedTime;
 
-    if (currentTime - tokenCreatedTime > sessionDuration) {
-        // 🔒 自動清理：如果發現 Token 已過期，主動將資料庫中的 session_token 抹除
+    // 1. 絕對過期攔截
+    if (tokenAge > sessionDuration) {
         await env.DB.prepare("UPDATE users SET session_token = NULL, token_created_at = NULL WHERE session_token = ?")
             .bind(token).run();
         return new Response("Session Expired (Server-side)", { status: 401 });
     }
 
+    // 2. 封號攔截
     if (user.banned_until && (user.banned_until === 'permanent' || new Date(user.banned_until) > new Date())) {
         return new Response("Account Banned", { status: 403 });
     }
 
+    // 3. 越權攔截
     if (url.pathname.startsWith('/api/admin/') && user.role !== 'admin') {
         return new Response("Forbidden", { status: 403 });
+    }
+
+    // 💡 4. 智能續期核心：如果 Token 已經用了超過 1 小時，幫他刷新壽命
+    let shouldRenew = false;
+    if (tokenAge > 60 * 60 * 1000) { 
+        await env.DB.prepare("UPDATE users SET token_created_at = ? WHERE session_token = ?")
+            .bind(new Date().toISOString(), token).run();
+        shouldRenew = true;
     }
 
     context.data.user = user;
@@ -42,5 +52,11 @@ export async function onRequest(context) {
     const response = await next();
     response.headers.set('X-Content-Type-Options', 'nosniff');
     response.headers.set('X-Frame-Options', 'DENY');
+
+    // 💡 5. 如果觸發了續期，同時把前端瀏覽器的 Cookie 也續命 24 小時
+    if (shouldRenew) {
+        response.headers.append('Set-Cookie', `session_token=${token}; HttpOnly; Secure; Path=/; SameSite=Strict; Max-Age=86400`);
+    }
+
     return response;
 }
