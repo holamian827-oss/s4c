@@ -26,19 +26,21 @@
         <div class="flex gap-3 items-center">
             <button id="btnNavAdminAdd" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm font-bold shadow hidden">＋ 新增項目</button>
             <span id="navUserInfo" class="text-sm font-bold text-blue-100">驗證中...</span>
+            
             <button id="btnFeedback" class="bg-blue-800 hover:bg-blue-900 px-3 py-1 rounded text-sm transition border border-blue-400">💡 意見反饋</button>
+            
             <button id="btnLogout" class="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm font-semibold transition">登出</button>
             <button id="btnSysMenu" class="bg-blue-900 hover:bg-blue-950 px-3 py-1 rounded text-sm transition font-bold ml-2">≡</button>
         </div>
     </nav>
 
     <main id="mainAppView" class="container mx-auto mt-6 p-4 flex-grow hidden">
-        <div class="bg-white p-4 rounded-lg shadow-md mb-6 flex flex-wrap gap-4 items-center border-l-4 border-blue-600">
+        <div class="bg-white p-4 rounded-lg shadow-md mb-6 flex flex-col md:flex-row flex-wrap gap-4 items-center border-l-4 border-blue-600">
             <span class="font-bold text-gray-700">🔍 篩選：</span>
             <select id="filterType" class="border p-2 rounded outline-none bg-gray-50"><option value="all">所有類型</option><option value="homework">功課</option><option value="test">測驗</option><option value="notice">通告回條</option><option value="event">學校活動</option></select>
-            <select id="filterSubject" class="border p-2 rounded outline-none bg-gray-50"><option value="all">所有科目</option><option value="中文">中文</option><option value="英文">英文</option><option value="數學 (班主任)">數學 (含附加數學)</option><option value="物理">物理</option><option value="化學">化學</option><option value="生物">生物</option><option value="資訊科技">資訊科技</option><option value="歷史">歷史</option><option value="地理">地理</option><option value="音樂">音樂</option><option value="視藝">視藝</option><option value="宗教與公民">宗教與公民</option></select>
+            <select id="filterSubject" class="border p-2 rounded outline-none bg-gray-50"><option value="all">所有科目</option><option value="中文">中文</option><option value="英文">英文</option><option value="數學 (班主任)">數學</option><option value="物理">物理</option><option value="化學">化學</option><option value="生物">生物</option><option value="資訊科技">資訊科技</option><option value="歷史">歷史</option><option value="地理">地理</option><option value="音樂">音樂</option><option value="視藝">視藝</option><option value="宗教與公民">宗教與公民</option></select>
             <button id="applyFilter" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded transition font-medium shadow-sm">套用篩選</button>
-            <button id="btnOpenModal" class="ml-auto bg-green-600 text-white px-5 py-2 rounded transition font-bold hidden">＋ 新增項目</button>
+            <button id="btnOpenModal" class="md:ml-auto bg-green-600 text-white px-5 py-2 rounded transition font-bold hidden">＋ 新增項目</button>
         </div>
         <div id="calendar"></div>
     </main>
@@ -48,50 +50,35 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="bg-white p-6 rounded-lg shadow border-t-4 border-blue-500 flex flex-col h-[650px]">
                 <h3 class="text-lg font-bold mb-4 text-gray-700 sticky top-0 bg-white">⏱️ 最近登入帳號</h3>
-                <div class="overflow-y-auto flex-grow pr-2 hide-scrollbar">
-                    <ul id="adminLoginLog" class="space-y-3 text-sm"></ul>
-                </div>
+                <div class="overflow-y-auto flex-grow pr-2 hide-scrollbar"><ul id="adminLoginLog" class="space-y-3 text-sm"></ul></div>
             </div>
             <div class="bg-white p-6 rounded-lg shadow border-t-4 border-green-500 flex flex-col h-[650px]">
                 <h3 class="text-lg font-bold mb-4 text-gray-700 sticky top-0 bg-white">📋 近期新增項目</h3>
                 <div class="overflow-y-auto flex-grow pr-2 hide-scrollbar"><ul id="adminAuditLog" class="space-y-4 text-sm"></ul></div>
             </div>
-            
             <div class="bg-white p-6 rounded-lg shadow border-t-4 border-red-500 flex flex-col h-[650px]">
                 <h3 class="text-lg font-bold mb-5 text-gray-700 sticky top-0 bg-white">🔑 學生帳號管理</h3>
-                
                 <div class="mb-5">
-                    <select id="adminStudentSelect" class="w-full border-2 border-gray-200 p-3 rounded-lg bg-gray-50 focus:border-red-400 focus:bg-white outline-none transition text-base">
+                    <select id="adminStudentSelect" class="w-full border-2 border-gray-200 p-3 rounded-lg bg-gray-50 focus:border-red-400 outline-none transition text-base">
                         <option value="">-- 請選擇要管理的學號 --</option>
                     </select>
                 </div>
-                
                 <div id="adminStudentPanel" class="hidden flex-col gap-5 mb-6 p-5 bg-white rounded-xl border border-gray-200 shadow-sm">
                     <div class="flex justify-between items-center pb-3 border-b border-gray-100">
                         <span id="adminSelectedStudentName" class="text-xl font-bold text-gray-800"></span>
                         <span id="adminStudentStatus" class="px-3 py-1 rounded-full text-sm font-bold"></span>
                     </div>
-                    
-                    <button id="btnAdminResetPwd" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-base font-bold shadow-sm transition">
-                        🔄 重設為預設密碼
-                    </button>
-                    
+                    <button id="btnAdminResetPwd" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-base font-bold shadow-sm transition">🔄 重設為預設密碼</button>
                     <div class="flex gap-2">
                         <select id="banDurationSelect" class="border-2 border-red-100 rounded-lg px-2 py-3 bg-red-50 text-red-700 outline-none w-1/3 font-bold text-sm">
-                            <option value="1d">停 1 天</option>
-                            <option value="perm">永久</option>
+                            <option value="1d">停 1 天</option><option value="perm">永久</option>
                         </select>
-                        <button id="btnAdminSuspend" class="w-2/3 bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg text-base font-bold shadow-sm transition">
-                            🛑 停用此帳號
-                        </button>
+                        <button id="btnAdminSuspend" class="w-2/3 bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg text-base font-bold shadow-sm transition">🛑 停用此帳號</button>
                     </div>
                 </div>
-
                 <h3 class="text-md font-bold text-red-600 border-t pt-5 mb-4">🚫 目前停用名單</h3>
                 <div class="overflow-y-auto flex-grow pr-2 hide-scrollbar">
-                    <ul id="adminBannedList" class="space-y-3">
-                        <li class="text-gray-400 text-center mt-6">目前沒有被停用的帳號</li>
-                    </ul>
+                    <ul id="adminBannedList" class="space-y-3"><li class="text-gray-400 text-center mt-6">目前沒有被停用的帳號</li></ul>
                 </div>
             </div>
         </div>
@@ -101,8 +88,7 @@
         <div class="bg-white p-6 rounded-lg shadow-xl w-96">
             <h2 class="text-xl font-bold mb-4 text-blue-700 border-b pb-2">💡 意見反饋</h2>
             <form id="feedbackForm" class="flex flex-col gap-4">
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">反饋類型</label>
+                <div><label class="block text-sm font-semibold text-gray-700 mb-1">反饋類型</label>
                     <select id="feedbackType" class="w-full border p-2 rounded bg-gray-50"><option value="改進建議">改進建議</option><option value="bug反饋">Bug 反饋</option></select>
                 </div>
                 <div id="feedbackImageContainer" class="hidden">
@@ -111,8 +97,24 @@
                 </div>
                 <div><label class="block text-sm font-semibold text-gray-700 mb-1">詳細內容</label><textarea id="feedbackText" required rows="3" class="w-full border p-2 rounded"></textarea></div>
                 <div class="flex items-center gap-2"><input type="checkbox" id="feedbackAnonymous" class="rounded text-blue-600"><label for="feedbackAnonymous" class="text-sm font-semibold text-gray-700">匿名反饋</label></div>
-                <div class="flex justify-end gap-2 mt-2 pt-4 border-t"><button type="button" id="btnCloseFeedback" class="bg-gray-300 px-4 py-2 rounded">取消</button><button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded font-bold">提交</button></div>
+                <div class="flex justify-end gap-2 mt-2 pt-4 border-t">
+                    <button type="button" id="btnCloseFeedback" class="bg-gray-300 px-4 py-2 rounded">取消</button>
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded font-bold">提交</button>
+                </div>
             </form>
+        </div>
+    </div>
+
+    <div id="viewFeedbackModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center hidden z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg relative flex flex-col h-[500px]">
+            <button id="btnCloseViewFeedback" class="absolute top-4 right-4 text-gray-500 text-xl font-bold">&times;</button>
+            <h2 class="text-xl font-bold mb-4 text-blue-700 border-b pb-2">📥 意見箱</h2>
+            <div class="flex-grow overflow-y-auto relative hide-scrollbar">
+                <ul id="feedbackList" class="space-y-3 text-sm">
+                    <li class="text-gray-400 text-center py-10">目前尚未有任何意見反饋<br><span class="text-xs">(等待後端 API 對接)</span></li>
+                </ul>
+            </div>
+            <button id="btnCloseViewFeedbackBtn" class="bg-gray-200 hover:bg-gray-300 transition px-4 py-2 rounded w-full mt-4 font-bold">關閉</button>
         </div>
     </div>
 
@@ -127,9 +129,9 @@
             </div>
             <div class="flex-grow overflow-y-auto relative">
                 <div id="tabNotes" class="sys-tab-content block"><div class="bg-yellow-50 p-3 rounded"><ul class="list-disc ml-5 text-sm text-gray-700 space-y-2"><li>嚴禁分享密碼。</li><li>科代表請確保資料準確。</li></ul></div></div>
-                <div id="tabPwd" class="sys-tab-content hidden"><div class="bg-gray-50 p-6 rounded border text-center mt-2"><button id="btnChangeMyPwd" class="w-full bg-blue-600 text-white font-bold py-2 rounded">立即更改密碼</button></div></div>
+                <div id="tabPwd" class="sys-tab-content hidden"><div class="bg-gray-50 p-6 rounded border text-center mt-2"><button id="btnChangeMyPwd" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded transition">立即更改密碼</button></div></div>
                 <div id="tabAbout" class="sys-tab-content hidden h-full flex flex-col">
-                    <div class="bg-gray-50 border p-3 rounded flex-grow mb-3 text-sm text-gray-600">v1.0(public beta)<br>穩定性改進</div>
+                    <div class="bg-gray-50 border p-3 rounded flex-grow mb-3 text-sm text-gray-600">v1.1(Official)<br>修復反饋彈窗與介面顯示</div>
                     <div class="border-t pt-3"><h3 class="font-bold text-gray-800 text-sm">👨‍💻 開發名單</h3><p class="text-xs text-gray-600">開發設計：羅珏俊<br>環境部署：李嘉宏</p></div>
                 </div>
             </div>
@@ -160,17 +162,17 @@
             <div id="detailFields" class="space-y-3 text-sm text-gray-700 mb-6">
                 <p><strong>📌 類型：</strong> <span id="detailType" class="bg-gray-100 px-2 py-1 rounded"></span></p>
                 <p><strong>📖 科目：</strong> <span id="detailSubject"></span></p>
-                <p><strong>📝 備注：</strong> <span id="detailRemarks" class="text-gray-500 italic"></span></p>
+                <p><strong>📝 備注：</strong> <span id="detailRemarks" class="text-gray-500 italic">無</span></p>
                 <p id="detailUrlContainer" class="hidden"><strong>🔗 連結：</strong> <a id="detailUrl" href="#" target="_blank" class="text-blue-500 underline font-bold">點擊前往</a></p>
             </div>
             <div id="manageActionContainer" class="flex gap-2 border-t pt-4 hidden">
-                <button id="btnEditTask" class="bg-yellow-500 text-white px-4 py-2 rounded font-bold flex-1">修改</button>
-                <button id="btnDeleteTask" class="bg-red-500 text-white px-4 py-2 rounded font-bold flex-1">刪除</button>
+                <button id="btnEditTask" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded font-bold flex-1 transition">修改</button>
+                <button id="btnDeleteTask" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-bold flex-1 transition">刪除</button>
             </div>
-            <button id="btnCloseDetailBtn" class="bg-gray-200 w-full mt-4 py-2 rounded font-bold">關閉</button>
+            <button id="btnCloseDetailBtn" class="bg-gray-200 hover:bg-gray-300 w-full mt-4 py-2 rounded font-bold transition">關閉</button>
         </div>
     </div>
 
-    <script src="app.js?v=4"></script>
+    <script src="app.js"></script>
 </body>
 </html>
