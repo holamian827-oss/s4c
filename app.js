@@ -78,11 +78,12 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch(e) { alert("無法連接伺服器"); }
     });
 
-    // --- 4. 數據加載邏輯 ---
+    // --- 4. 數據加載邏輯 (包含過期與封號踢出) ---
     async function loadData() {
         try {
             const res = await fetch('/api/tasks');
-            if (res.status === 401) {
+            // 💡 關鍵修復：如果海關回報 401(沒登入/過期) 或 403(被封號/越權)，直接踢回登入頁
+            if (res.status === 401 || res.status === 403) {
                 window.location.href = 'login.html';
                 return;
             }
@@ -285,7 +286,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // 💡 找回來的彈窗開關邏輯：打開「發佈項目」彈窗
     const openAddModal = () => {
         editingTaskId = null; 
         const titleEl = document.getElementById('modalTitle');
@@ -298,7 +298,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btnNavAdminAdd')?.addEventListener('click', openAddModal);
     document.getElementById('btnCloseModal')?.addEventListener('click', () => document.getElementById('addModal')?.classList.add('hidden'));
 
-    // 💡 找回來的「修改/編輯」按鈕邏輯
     document.getElementById('btnEditTask')?.addEventListener('click', () => {
         const t = taskList.find(x => x.id === currentTaskId);
         if (!t) return;
@@ -318,7 +317,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('addModal')?.classList.remove('hidden');
     });
 
-    // 新增/修改項目提交
     document.getElementById('addTaskForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btnSubmitTask');
