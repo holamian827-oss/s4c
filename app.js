@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const rawUser = localStorage.getItem('s4c_user');
     const savedRole = localStorage.getItem('s4c_role');
     
-    // 如果本地紀錄缺失，跳回登入頁
     if (!rawUser || !savedRole || rawUser === '未登入') {
         window.location.href = 'login.html';
         return; 
@@ -23,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     document.getElementById('loadingShield')?.classList.add('hidden');
 
-    // --- 2. 視圖權限控制 (UI 層面) ---
+    // --- 2. 視圖權限控制 ---
     const mainAppView = document.getElementById('mainAppView');
     const adminDashboardView = document.getElementById('adminDashboardView');
     const btnNavAdminAdd = document.getElementById('btnNavAdminAdd');
@@ -42,13 +41,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btnSysMenu')?.addEventListener('click', () => sysMenuModal?.classList.remove('hidden'));
     document.getElementById('btnCloseSysMenu')?.addEventListener('click', () => sysMenuModal?.classList.add('hidden'));
 
-    // 💡 零信任安全登出：銷毀伺服器端的 HttpOnly Cookie
     document.getElementById('btnLogout')?.addEventListener('click', async () => {
-        try {
-            await fetch('/api/logout', { method: 'POST' });
-        } catch (e) {
-            console.error("登出通訊失敗");
-        }
+        try { await fetch('/api/logout', { method: 'POST' }); } catch (e) {}
         localStorage.clear();
         window.location.href = 'login.html';
     });
@@ -63,7 +57,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 變更密碼 (後端會自動驗證當前 Token)
     document.getElementById('btnChangeMyPwd')?.addEventListener('click', async () => {
         const oldP = prompt("請輸入目前的密碼：");
         const newP = prompt("請輸入新密碼 (最少 6 個字元)：");
@@ -90,13 +83,12 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const res = await fetch('/api/tasks');
             if (res.status === 401) {
-                window.location.href = 'login.html'; // Token 失效
+                window.location.href = 'login.html';
                 return;
             }
             taskList = await res.json();
             
             if (savedRole === 'admin') {
-                renderAdminAuditLog();
                 loadAdminUsers();
             } else {
                 renderCalendar(taskList);
@@ -135,7 +127,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         let active = adminUserList.filter(u => u.last_login).sort((a, b) => new Date(b.last_login) - new Date(a.last_login));
         const now = new Date().getTime();
-        // 24小時過期過濾
         active = active.filter(u => (now - new Date(u.last_login).getTime()) < 86400000).slice(0, 50);
 
         if (active.length === 0) {
@@ -159,7 +150,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (res.status === 403) return console.warn("權限不足，無法載入用戶列表");
             
             const rawUsers = await res.json();
-            // 💡 修正學號數字排序 (解決 1, 10, 2 亂序)
             adminUserList = rawUsers.sort((a, b) => {
                 const numA = parseInt(a.username) || 0;
                 const numB = parseInt(b.username) || 0;
@@ -275,7 +265,6 @@ document.addEventListener('DOMContentLoaded', function() {
             urlBox.classList.add('hidden');
         }
 
-        // 伺服器會核驗權限，前端僅做按鈕顯示控制
         const isAuthorized = (savedRole === 'admin' || savedRole === 'teacher' || t.createdBy === rawUser);
         document.getElementById('manageActionContainer')?.classList.toggle('hidden', !isAuthorized);
         document.getElementById('detailModal')?.classList.remove('hidden');
@@ -284,7 +273,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btnCloseDetailBtn')?.addEventListener('click', () => document.getElementById('detailModal')?.classList.add('hidden'));
     document.getElementById('btnCloseDetailX')?.addEventListener('click', () => document.getElementById('detailModal')?.classList.add('hidden'));
 
-    // 刪除項目 (後端會驗證 Token 是否有權刪除)
     document.getElementById('btnDeleteTask')?.addEventListener('click', async () => {
         if (confirm("⚠️ 確定要刪除嗎？")) {
             const res = await fetch(`/api/tasks?id=${currentTaskId}`, { method: 'DELETE' });
@@ -297,7 +285,40 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // 新增/修改項目
+    // 💡 找回來的彈窗開關邏輯：打開「發佈項目」彈窗
+    const openAddModal = () => {
+        editingTaskId = null; 
+        const titleEl = document.getElementById('modalTitle');
+        if(titleEl) titleEl.textContent = "📝 發佈項目";
+        document.getElementById('addTaskForm')?.reset();
+        document.getElementById('addModal')?.classList.remove('hidden');
+    };
+    
+    document.getElementById('btnOpenModal')?.addEventListener('click', openAddModal);
+    document.getElementById('btnNavAdminAdd')?.addEventListener('click', openAddModal);
+    document.getElementById('btnCloseModal')?.addEventListener('click', () => document.getElementById('addModal')?.classList.add('hidden'));
+
+    // 💡 找回來的「修改/編輯」按鈕邏輯
+    document.getElementById('btnEditTask')?.addEventListener('click', () => {
+        const t = taskList.find(x => x.id === currentTaskId);
+        if (!t) return;
+        
+        document.getElementById('inputTitle').value = t.title;
+        document.getElementById('inputRemarks').value = t.remarks || '';
+        document.getElementById('inputUrl').value = t.url || '';
+        document.getElementById('inputType').value = t.type || 'homework';
+        document.getElementById('inputSubject').value = t.subject || '';
+        document.getElementById('inputDate').value = t.date || '';
+        
+        editingTaskId = currentTaskId;
+        const titleEl = document.getElementById('modalTitle');
+        if(titleEl) titleEl.textContent = "✏️ 修改項目";
+        
+        document.getElementById('detailModal')?.classList.add('hidden');
+        document.getElementById('addModal')?.classList.remove('hidden');
+    });
+
+    // 新增/修改項目提交
     document.getElementById('addTaskForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btnSubmitTask');
