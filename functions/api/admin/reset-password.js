@@ -1,4 +1,4 @@
-// 密碼加密函數 (SHA-256)
+// 密碼加密函數
 async function hashPassword(password) {
     const msgBuffer = new TextEncoder().encode(password);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -8,21 +8,26 @@ async function hashPassword(password) {
 
 export async function onRequestPost({ request, env }) {
     try {
-        const { username } = await request.json();
+        // 1. 零信任檢查：驗證管理員身分
+        const cookie = request.headers.get('Cookie');
+        if (!cookie) return new Response("Unauthorized", { status: 401 });
         
-        if (!username) {
-            return Response.json({ success: false, message: "缺少使用者名稱" }, { status: 400 });
+        const match = cookie.match(/session_token=([^;]+)/);
+        const adminUser = match ? await env.DB.prepare("SELECT * FROM users WHERE session_token = ?").bind(match[1]).first() : null;
+        
+        if (!adminUser || adminUser.role !== 'admin') {
+            return new Response("Forbidden: 只有管理員可以重置密碼", { status: 403 });
         }
 
-        // 1. 先將預設密碼 "12345678" 進行哈希計算加密！
-        const defaultHashedPassword = await hashPassword('12345678');
-
-        // 2. 將加密後的亂碼存入數據庫，覆蓋舊密碼
+        // 2. 執行重置 (必須轉換為哈希值！)
+        const { username } = await request.json();
+        const defaultHash = await hashPassword('12345678'); // 💡 確保重置的也是加密亂碼
+        
         await env.DB.prepare("UPDATE users SET password = ? WHERE username = ?")
-            .bind(defaultHashedPassword, username).run();
-
-        return Response.json({ success: true, message: `密碼已重設為預設值` });
-    } catch (err) {
-        return Response.json({ success: false, message: err.message }, { status: 500 });
+            .bind(defaultHash, username).run();
+            
+        return Response.json({ success: true });
+    } catch (error) {
+        return Response.json({ success: false, message: error.message }, { status: 500 });
     }
 }
