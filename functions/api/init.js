@@ -1,6 +1,5 @@
-// functions/api/init.js
 async function hashPassword(password, salt) {
-    const msgBuffer = new TextEncoder().encode(password + salt); // 密碼 + 鹽
+    const msgBuffer = new TextEncoder().encode(password + salt);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
     return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
@@ -12,27 +11,32 @@ export async function onRequestGet({ request, env }) {
     }
 
     try {
-        // 核心：新增 salt 欄位
+        // 💡 關鍵修復：先刪除舊版沒有 salt 欄位的 users 表，強制重建
+        await env.DB.prepare("DROP TABLE IF EXISTS users").run();
+        
         await env.DB.prepare(`
-            CREATE TABLE IF NOT EXISTS users (
+            CREATE TABLE users (
                 username TEXT PRIMARY KEY, password TEXT NOT NULL, salt TEXT NOT NULL, 
                 role TEXT NOT NULL, banned_until TEXT, last_login TEXT, session_token TEXT
             )
         `).run();
         
-        await env.DB.prepare("CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, title TEXT, date TEXT, type TEXT, subject TEXT, remarks TEXT, url TEXT, color TEXT, completed INTEGER, createdBy TEXT)").run();
+        await env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS tasks (
+                id TEXT PRIMARY KEY, title TEXT, date TEXT, type TEXT, subject TEXT, 
+                remarks TEXT, url TEXT, color TEXT, completed INTEGER, createdBy TEXT
+            )
+        `).run();
 
         const students = ["01_陳凱晴", "02_陳凱琳", "03_陳映彤", "04_陳柏揚", "05_陳玄楓", "06_周晉賢", "07_周博熙", "08_陳佶弢", "09_鍾震峰", "10_鄧名傑", "11_高梓博", "12_許德懿", "13_胡峻源", "14_黃啟琨", "15_黃旖旎", "16_郭藹霖", "17_林子軒", "18_林浩信", "19_林依澄", "20_林嘉怡", "21_李卓喬", "22_李嘉宏", "23_李釨凝", "24_梁紫菱", "25_羅康裕", "26_呂凱豐", "27_羅珏俊", "28_唐梓航", "29_唐廉皓", "30_黃梓浩", "31_葉希蕾", "32_黃美琦", "33_黃思穎", "34_葉黌鵬", "35_張騰文"];
 
         let stmts = [];
-        stmts.push(env.DB.prepare("DELETE FROM users"));
 
-        // 為管理員生成鹽
+        // 為管理員生成專屬鹽
         const adminSalt = crypto.randomUUID();
         const adminHash = await hashPassword('Admin1234', adminSalt);
         stmts.push(env.DB.prepare("INSERT INTO users (username, password, salt, role) VALUES (?,?,?,?)").bind('admin', adminHash, adminSalt, 'admin'));
 
-        // 為學生/老師生成鹽
         const teachers = ['班主任', '中文老師', '英文老師', '物理老師', '化學老師', '生物老師', '資訊科技老師'];
         for (const t of teachers) {
             const salt = crypto.randomUUID();
@@ -47,6 +51,6 @@ export async function onRequestGet({ request, env }) {
         }
 
         await env.DB.batch(stmts);
-        return new Response("✅ 加鹽資料庫升級完成！", { status: 200 });
+        return new Response("✅ 加鹽資料庫升級完成，舊表已成功覆寫！", { status: 200 });
     } catch (e) { return new Response(e.message, { status: 500 }); }
 }
