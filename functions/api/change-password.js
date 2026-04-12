@@ -1,4 +1,3 @@
-// 密码加密函数 (SHA-256)
 async function hashPassword(password) {
     const msgBuffer = new TextEncoder().encode(password);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -7,21 +6,23 @@ async function hashPassword(password) {
 }
 
 export async function onRequestPost({ request, env }) {
-    const { username, oldPassword, newPassword } = await request.json();
-    
-    // 把用户输入的旧密码和新密码都转换成乱码
-    const hashedOld = await hashPassword(oldPassword);
-    const hashedNew = await hashPassword(newPassword);
-    
-    // 用转换后的旧密码去数据库核对
-    const user = await env.DB.prepare("SELECT * FROM users WHERE username = ? AND password = ?")
-        .bind(username, hashedOld).first();
+    try {
+        const { username, oldPassword, newPassword } = await request.json();
+        
+        // 🔒 雙重哈希加密，絕不讓明文接觸資料庫
+        const hashedOld = await hashPassword(oldPassword);
+        const hashedNew = await hashPassword(newPassword);
+        
+        const user = await env.DB.prepare("SELECT * FROM users WHERE username = ? AND password = ?")
+            .bind(username, hashedOld).first();
 
-    if (!user) return Response.json({ success: false, message: "旧密码不正确" });
+        if (!user) return Response.json({ success: false, message: "舊密碼不正確" });
 
-    // 验证成功，把加密后的新密码存入数据库
-    await env.DB.prepare("UPDATE users SET password = ? WHERE username = ?")
-        .bind(hashedNew, username).run();
+        await env.DB.prepare("UPDATE users SET password = ? WHERE username = ?")
+            .bind(hashedNew, username).run();
 
-    return Response.json({ success: true });
+        return Response.json({ success: true });
+    } catch (error) {
+        return Response.json({ success: false, message: "系統錯誤" }, { status: 500 });
+    }
 }
