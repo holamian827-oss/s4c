@@ -1,37 +1,31 @@
-// functions/api/_middleware.js
 export async function onRequest(context) {
     const { request, env, next } = context;
     const url = new URL(request.url);
 
-    // 1. 白名單：登入和初始化不檢查 Token
-    if (url.pathname === '/api/login' || url.pathname === '/api/init') {
+    // 💡 關鍵修復：把 /api/logout 加進白名單，確保過期用戶也能順利清空 Cookie
+    if (url.pathname === '/api/login' || url.pathname === '/api/init' || url.pathname === '/api/logout') {
         return next();
     }
 
-    // 2. 攔截 Cookie
     const cookie = request.headers.get('Cookie');
-    if (!cookie) return new Response("Unauthorized", { status: 401 });
+    if (!cookie) return new Response("Unauthorized: 缺少憑證", { status: 401 });
 
     const match = cookie.match(/session_token=([^;]+)/);
-    if (!match) return new Response("Unauthorized", { status: 401 });
+    if (!match) return new Response("Unauthorized: 憑證無效", { status: 401 });
 
-    // 3. 查驗 Token 與狀態
     const user = await env.DB.prepare("SELECT * FROM users WHERE session_token = ?").bind(match[1]).first();
-    if (!user) return new Response("Session Expired", { status: 401 });
+    if (!user) return new Response("Session Expired: 登入已過期", { status: 401 });
 
     if (user.banned_until && (user.banned_until === 'permanent' || new Date(user.banned_until) > new Date())) {
-        return new Response("Account Banned", { status: 403 });
+        return new Response("Account Banned: 帳號停用中", { status: 403 });
     }
 
-    // 4. 🛡️ 權限硬隔離：非 admin 禁入 /admin/ 資料夾
     if (url.pathname.startsWith('/api/admin/') && user.role !== 'admin') {
-        return new Response("Forbidden: Admin Only", { status: 403 });
+        return new Response("Forbidden: 僅限管理員", { status: 403 });
     }
 
-    // 5. 注入身分供後續使用
     context.data.user = user;
 
-    // 6. 安全標頭加固
     const response = await next();
     response.headers.set('X-Content-Type-Options', 'nosniff');
     response.headers.set('X-Frame-Options', 'DENY');
