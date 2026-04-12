@@ -11,15 +11,15 @@ export async function onRequestGet({ request, env }) {
     }
 
     try {
-        // 💡 關鍵修復：先刪除舊版沒有 salt 欄位的 users 表，強制重建
         await env.DB.prepare("DROP TABLE IF EXISTS users").run();
         
         await env.DB.prepare(`
             CREATE TABLE users (
                 username TEXT PRIMARY KEY, password TEXT NOT NULL, salt TEXT NOT NULL, 
-                role TEXT NOT NULL, banned_until TEXT, last_login TEXT, session_token TEXT
+                role TEXT NOT NULL, banned_until TEXT, last_login TEXT, 
+                session_token TEXT, token_created_at TEXT
             )
-        `).run();
+        `).run(); // 💡 新增了 token_created_at 欄位
         
         await env.DB.prepare(`
             CREATE TABLE IF NOT EXISTS tasks (
@@ -29,10 +29,8 @@ export async function onRequestGet({ request, env }) {
         `).run();
 
         const students = ["01_陳凱晴", "02_陳凱琳", "03_陳映彤", "04_陳柏揚", "05_陳玄楓", "06_周晉賢", "07_周博熙", "08_陳佶弢", "09_鍾震峰", "10_鄧名傑", "11_高梓博", "12_許德懿", "13_胡峻源", "14_黃啟琨", "15_黃旖旎", "16_郭藹霖", "17_林子軒", "18_林浩信", "19_林依澄", "20_林嘉怡", "21_李卓喬", "22_李嘉宏", "23_李釨凝", "24_梁紫菱", "25_羅康裕", "26_呂凱豐", "27_羅珏俊", "28_唐梓航", "29_唐廉皓", "30_黃梓浩", "31_葉希蕾", "32_黃美琦", "33_黃思穎", "34_葉黌鵬", "35_張騰文"];
-
         let stmts = [];
 
-        // 為管理員生成專屬鹽
         const adminSalt = crypto.randomUUID();
         const adminHash = await hashPassword('Admin1234', adminSalt);
         stmts.push(env.DB.prepare("INSERT INTO users (username, password, salt, role) VALUES (?,?,?,?)").bind('admin', adminHash, adminSalt, 'admin'));
@@ -51,6 +49,6 @@ export async function onRequestGet({ request, env }) {
         }
 
         await env.DB.batch(stmts);
-        return new Response("✅ 加鹽資料庫升級完成，舊表已成功覆寫！", { status: 200 });
+        return new Response("✅ 安全資料庫 2.0 升級完成！", { status: 200 });
     } catch (e) { return new Response(e.message, { status: 500 }); }
 }
