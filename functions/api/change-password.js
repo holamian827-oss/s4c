@@ -1,30 +1,23 @@
-async function hashPassword(password) {
-    const msgBuffer = new TextEncoder().encode(password);
+// functions/api/change-password.js
+async function hashPassword(password, salt) {
+    const msgBuffer = new TextEncoder().encode(password + salt);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
     return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export async function onRequestPost({ request, env }) {
-    try {
-        const cookie = request.headers.get('Cookie');
-        if (!cookie) return new Response("Unauthorized", { status: 401 });
-        const match = cookie.match(/session_token=([^;]+)/);
-        const currentUser = match ? await env.DB.prepare("SELECT * FROM users WHERE session_token = ?").bind(match[1]).first() : null;
-        
-        if (!currentUser) return new Response("Unauthorized", { status: 401 });
+export async function onRequestPost({ request, data, env }) {
+    const user = data.user; // 從海關拿到當前用戶
+    const { oldPassword, newPassword } = await request.json();
 
-        const { oldPassword, newPassword } = await request.json();
-        const hashedOld = await hashPassword(oldPassword);
-        const hashedNew = await hashPassword(newPassword);
-        
-        // 🔒 验证旧密码（全程哈希，对比真实数据库资料）
-        if (hashedOld !== currentUser.password) {
-            return Response.json({ success: false, message: "舊密碼不正確" });
-        }
+    const oldHash = await hashPassword(oldPassword, user.salt);
+    if (oldHash !== user.password) return Response.json({ success: false, message: "舊密碼錯誤" });
 
-        await env.DB.prepare("UPDATE users SET password = ? WHERE username = ?").bind(hashedNew, currentUser.username).run();
-        return Response.json({ success: true });
-    } catch (e) {
-        return Response.json({ success: false, message: e.message }, { status: 500 });
-    }
+    // 💡 升級：改密碼時順便換個新鹽
+    const newSalt = crypto.randomUUID();
+    const newHash = await hashPassword(newPassword, newSalt);
+
+    await env.DB.prepare("UPDATE users SET password = ?, salt = ?, session_token = NULL WHERE username = ?")
+        .bind(newHash, newSalt, user.username).run();
+        
+    return Response.json({ success: true });
 }
