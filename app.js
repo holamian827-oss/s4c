@@ -12,13 +12,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const rawUser = localStorage.getItem('s4c_user');
     const savedRole = localStorage.getItem('s4c_role');
     
+    const displayUser = (savedRole === 'admin') ? '系統管理員' : rawUser;
+    
     if (!rawUser || !savedRole || rawUser === '未登入') {
         window.location.href = 'login.html';
         return; 
     }
 
     const navUserInfo = document.getElementById('navUserInfo');
-    if (navUserInfo) navUserInfo.textContent = rawUser;
+    if (navUserInfo) navUserInfo.textContent = displayUser;
     
     document.getElementById('loadingShield')?.classList.add('hidden');
 
@@ -85,18 +87,44 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch(e) { alert("無法連接伺服器"); }
     });
 
-    // 意見反饋
+    // --- 4. 💡 意見反饋 / 📥 查看意見 ---
+    const btnFeedback = document.getElementById('btnFeedback');
     const feedbackModal = document.getElementById('feedbackModal');
-    document.getElementById('btnFeedback')?.addEventListener('click', () => feedbackModal.classList.remove('hidden'));
-    document.getElementById('btnCloseFeedback')?.addEventListener('click', () => feedbackModal.classList.add('hidden'));
-    document.getElementById('feedbackForm')?.addEventListener('submit', (e) => { 
-        e.preventDefault(); 
-        alert("✅ 反饋已提交！管理員將會盡快跟進。"); 
-        feedbackModal.classList.add('hidden'); 
-        document.getElementById('feedbackForm').reset();
-    });
+    const viewFeedbackModal = document.getElementById('viewFeedbackModal');
+    const feedbackType = document.getElementById('feedbackType');
+    const feedbackImageContainer = document.getElementById('feedbackImageContainer');
+    const feedbackForm = document.getElementById('feedbackForm');
 
-    // --- 4. 數據加載邏輯 ---
+    if (btnFeedback) {
+        if (savedRole === 'admin') {
+            btnFeedback.innerHTML = '📥 查看意見';
+            btnFeedback.addEventListener('click', () => viewFeedbackModal?.classList.remove('hidden'));
+        } else {
+            btnFeedback.addEventListener('click', () => feedbackModal?.classList.remove('hidden'));
+        }
+    }
+
+    document.getElementById('btnCloseFeedback')?.addEventListener('click', () => feedbackModal?.classList.add('hidden'));
+    document.getElementById('btnCloseViewFeedback')?.addEventListener('click', () => viewFeedbackModal?.classList.add('hidden'));
+    document.getElementById('btnCloseViewFeedbackBtn')?.addEventListener('click', () => viewFeedbackModal?.classList.add('hidden'));
+
+    if (feedbackType) {
+        feedbackType.addEventListener('change', () => {
+            feedbackImageContainer?.classList.toggle('hidden', feedbackType.value !== 'bug反饋');
+        });
+    }
+
+    if (feedbackForm) {
+        feedbackForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            alert("✅ 反饋已提交！管理員將會盡快跟進。");
+            feedbackModal?.classList.add('hidden');
+            feedbackForm.reset();
+            feedbackImageContainer?.classList.add('hidden');
+        });
+    }
+
+    // --- 5. 數據加載邏輯 ---
     async function loadData() {
         try {
             const res = await fetch('/api/tasks');
@@ -115,27 +143,39 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (e) { console.error("加載失敗", e); }
     }
 
-    // --- 5. 日曆與篩選 ---
+    // --- 6. 日曆與列表模式 (手機自適應) ---
     function renderCalendar(data) {
         const el = document.getElementById('calendar');
         if (!el) return;
         
-        const events = data.map(t => ({
-            id: t.id, title: t.title, start: t.date, 
-            color: t.color || (t.type === 'test' ? '#EF4444' : '#3B82F6'), 
-            extendedProps: t
-        }));
+        const events = data.map(t => {
+            // 根據類型賦予不同顏色
+            let evtColor = '#3B82F6'; // 預設藍色(功課)
+            if (t.type === 'test') evtColor = '#EF4444'; // 紅色
+            else if (t.type === 'notice') evtColor = '#F59E0B'; // 橙色
+            else if (t.type === 'event') evtColor = '#10B981'; // 綠色
+            
+            return {
+                id: t.id, title: t.title, start: t.date, 
+                color: t.color || evtColor, 
+                extendedProps: t
+            };
+        });
 
         if (!calendar) {
             calendar = new FullCalendar.Calendar(el, {
-                // 手機版預設列表模式
+                // 手機預設列表，電腦預設日曆
                 initialView: window.innerWidth < 768 ? 'listMonth' : 'dayGridMonth',
-                headerToolbar: { 
-                    left: 'prev,next today', 
-                    center: 'title', 
-                    right: 'dayGridMonth,listMonth' 
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,listMonth'
                 },
-                buttonText: { month: '日曆模式', listMonth: '列表模式', today: '今天' },
+                buttonText: {
+                    month: '日曆模式',
+                    listMonth: '列表模式',
+                    today: '今天'
+                },
                 handleWindowResize: true,
                 height: 'auto',
                 events: events,
@@ -150,142 +190,158 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('applyFilter')?.addEventListener('click', () => {
         if (!calendar) return;
-        const selectedType = document.getElementById('filterType').value;
-        const selectedSubject = document.getElementById('filterSubject').value;
-        
+        const type = document.getElementById('filterType').value;
+        const subject = document.getElementById('filterSubject').value;
         const filteredTasks = taskList.filter(task => {
-            // 兼容舊資料：如果舊資料係「數學 (班主任)」，當作「數學」過濾
-            let s = task.subject;
-            if (s === '數學 (班主任)') s = '數學';
-            return (selectedType === 'all' || task.type === selectedType) && (selectedSubject === 'all' || s === selectedSubject);
+            return (type === 'all' || task.type === type) && (subject === 'all' || task.subject === subject);
         });
         renderCalendar(filteredTasks);
     });
 
-    // --- 6. 項目操作 (新增/修改/刪除/詳情) ---
+    // --- 7. 項目詳情與操作 ---
     function openDetailModalById(id) {
         const t = taskList.find(x => x.id === id);
-        if(!t) return;
+        if (!t) return;
         currentTaskId = id;
-
         document.getElementById('detailTitle').textContent = t.title;
         
-        // 類型翻譯
-        let typeStr = '其他';
-        if (t.type === 'homework') typeStr = '功課';
-        else if (t.type === 'test') typeStr = '測驗';
-        else if (t.type === 'notice') typeStr = '通告回條';
-        else if (t.type === 'event') typeStr = '學校活動';
-        document.getElementById('detailType').textContent = typeStr;
-
-        // 科目處理 (隱藏班主任字眼)
-        let displaySubject = t.subject;
-        if (displaySubject === '數學 (班主任)') displaySubject = '數學';
-        document.getElementById('detailSubject').textContent = displaySubject || '無';
+        // 翻譯類型名稱
+        let typeName = '其他';
+        if (t.type === 'homework') typeName = '功課';
+        else if (t.type === 'test') typeName = '測驗';
+        else if (t.type === 'notice') typeName = '通告回條';
+        else if (t.type === 'event') typeName = '學校活動';
         
+        document.getElementById('detailType').textContent = typeName;
+        document.getElementById('detailSubject').textContent = t.subject || '無';
         document.getElementById('detailRemarks').textContent = t.remarks || '無';
         
-        const urlContainer = document.getElementById('detailUrlContainer');
-        if(t.url) { 
-            urlContainer.classList.remove('hidden'); 
-            document.getElementById('detailUrl').href = t.url; 
-        } else { urlContainer.classList.add('hidden'); }
+        const urlBox = document.getElementById('detailUrlContainer');
+        if (t.url) {
+            urlBox.classList.remove('hidden');
+            document.getElementById('detailUrl').href = t.url;
+        } else {
+            urlBox.classList.add('hidden');
+        }
 
-        const isCreatorOrAdmin = (savedRole === 'admin' || t.createdBy === rawUser || savedRole === 'teacher');
-        document.getElementById('manageActionContainer').classList.toggle('hidden', !isCreatorOrAdmin);
-        document.getElementById('detailModal').classList.remove('hidden');
+        const isAuthorized = (savedRole === 'admin' || savedRole === 'teacher' || t.createdBy === rawUser);
+        document.getElementById('manageActionContainer')?.classList.toggle('hidden', !isAuthorized);
+        document.getElementById('detailModal')?.classList.remove('hidden');
     }
 
-    document.getElementById('btnCloseDetailX').onclick = () => document.getElementById('detailModal').classList.add('hidden');
-    document.getElementById('btnCloseDetailBtn').onclick = () => document.getElementById('detailModal').classList.add('hidden');
+    document.getElementById('btnCloseDetailBtn')?.addEventListener('click', () => document.getElementById('detailModal')?.classList.add('hidden'));
+    document.getElementById('btnCloseDetailX')?.addEventListener('click', () => document.getElementById('detailModal')?.classList.add('hidden'));
 
     document.getElementById('btnDeleteTask')?.addEventListener('click', async () => {
-        if(confirm("⚠️ 確定要刪除此項目嗎？")) {
-            await fetch(`/api/tasks?id=${currentTaskId}`, { method: 'DELETE' });
-            document.getElementById('detailModal').classList.add('hidden');
-            loadData();
+        if (confirm("⚠️ 確定要刪除嗎？")) {
+            const res = await fetch(`/api/tasks?id=${currentTaskId}`, { method: 'DELETE' });
+            if (res.ok) {
+                document.getElementById('detailModal').classList.add('hidden');
+                loadData();
+            } else {
+                alert("❌ 權限不足，無法刪除！");
+            }
         }
-    });
-
-    document.getElementById('btnEditTask')?.addEventListener('click', () => {
-        const t = taskList.find(x => x.id === currentTaskId);
-        if(!t) return;
-        document.getElementById('inputTitle').value = t.title.replace(/^\[.*?\] /, ''); 
-        document.getElementById('inputRemarks').value = t.remarks || '';
-        document.getElementById('inputUrl').value = t.url || '';
-        document.getElementById('inputType').value = t.type || 'homework';
-        document.getElementById('inputSubject').value = (t.subject === '數學 (班主任)') ? '數學' : t.subject || '';
-        document.getElementById('inputDate').value = t.date || '';
-        
-        editingTaskId = currentTaskId;
-        const titleEl = document.getElementById('modalTitle');
-        if(titleEl) titleEl.textContent = "✏️ 修改項目";
-        
-        document.getElementById('detailModal').classList.add('hidden');
-        document.getElementById('addModal').classList.remove('hidden');
     });
 
     const openAddModal = () => {
         editingTaskId = null; 
         const titleEl = document.getElementById('modalTitle');
         if(titleEl) titleEl.textContent = "📝 發佈項目";
-        document.getElementById('addTaskForm').reset();
-        document.getElementById('addModal').classList.remove('hidden');
+        document.getElementById('addTaskForm')?.reset();
+        document.getElementById('addModal')?.classList.remove('hidden');
     };
+    
     document.getElementById('btnOpenModal')?.addEventListener('click', openAddModal);
     document.getElementById('btnNavAdminAdd')?.addEventListener('click', openAddModal);
-    document.getElementById('btnCloseModal').onclick = () => document.getElementById('addModal').classList.add('hidden');
+    document.getElementById('btnCloseModal')?.addEventListener('click', () => document.getElementById('addModal')?.classList.add('hidden'));
+
+    document.getElementById('btnEditTask')?.addEventListener('click', () => {
+        const t = taskList.find(x => x.id === currentTaskId);
+        if (!t) return;
+        
+        document.getElementById('inputTitle').value = t.title.replace(/^\[.*?\] /, ''); 
+        document.getElementById('inputRemarks').value = t.remarks || '';
+        document.getElementById('inputUrl').value = t.url || '';
+        document.getElementById('inputType').value = t.type || 'homework';
+        document.getElementById('inputSubject').value = t.subject || '';
+        document.getElementById('inputDate').value = t.date || '';
+        
+        editingTaskId = currentTaskId;
+        const titleEl = document.getElementById('modalTitle');
+        if(titleEl) titleEl.textContent = "✏️ 修改項目";
+        
+        document.getElementById('detailModal')?.classList.add('hidden');
+        document.getElementById('addModal')?.classList.remove('hidden');
+    });
 
     document.getElementById('addTaskForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btnSubmitTask');
-        btn.textContent = "儲存中..."; 
         btn.disabled = true;
 
         let urlInput = document.getElementById('inputUrl').value.trim();
         if (urlInput && !/^https?:\/\//i.test(urlInput)) urlInput = 'https://' + urlInput;
 
-        const title = document.getElementById('inputTitle').value;
-        const type = document.getElementById('inputType').value;
-        const importance = document.getElementById('inputImportance')?.value || '';
-        const fullTitle = (type === 'test' && importance) ? `[${importance}] ${title}` : title;
+        const typeVal = document.getElementById('inputType').value;
+        let evtColor = '#3B82F6'; 
+        if (typeVal === 'test') evtColor = '#EF4444'; 
+        else if (typeVal === 'notice') evtColor = '#F59E0B'; 
+        else if (typeVal === 'event') evtColor = '#10B981';
 
-        let evtColor = '#3B82F6'; // Default homework
-        if (type === 'test') evtColor = '#EF4444';
-        else if (type === 'notice') evtColor = '#F59E0B';
-        else if (type === 'event') evtColor = '#10B981';
-
-        const taskData = {
+        const data = {
             id: editingTaskId || String(Date.now()),
-            title: fullTitle, 
+            title: document.getElementById('inputTitle').value,
             date: document.getElementById('inputDate').value,
-            type: type, 
+            type: typeVal,
             subject: document.getElementById('inputSubject').value,
             remarks: document.getElementById('inputRemarks').value,
-            url: urlInput, 
-            color: evtColor, 
-            completed: 0, 
+            url: urlInput,
+            color: evtColor,
+            completed: 0,
             createdBy: rawUser
         };
 
         const res = await fetch('/api/tasks', { 
             method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify(taskData) 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify(data) 
         });
-        
+
         if (res.ok) {
             document.getElementById('addModal').classList.add('hidden');
-            document.getElementById('addTaskForm').reset();
             loadData();
         } else {
             alert("❌ 儲存失敗！");
         }
-        btn.textContent = "儲存"; 
         btn.disabled = false;
     });
 
-    // --- 7. 管理員後台 ---
+    // --- 8. 管理員專區：真實日誌與用戶管理 ---
+    function renderLoginLogs() {
+        const ul = document.getElementById('adminLoginLog');
+        if (!ul) return;
+        ul.innerHTML = '';
+
+        let active = adminUserList.filter(u => u.last_login).sort((a, b) => new Date(b.last_login) - new Date(a.last_login));
+        const now = new Date().getTime();
+        active = active.filter(u => (now - new Date(u.last_login).getTime()) < 86400000).slice(0, 50);
+
+        if (active.length === 0) {
+            ul.innerHTML = '<li class="text-gray-400 text-center py-4 text-sm border-dashed border-2 rounded">近 24 小時內無人登入</li>';
+            return;
+        }
+
+        ul.innerHTML = active.map(u => {
+            const diff = Math.floor((now - new Date(u.last_login).getTime()) / 60000);
+            const timeStr = diff < 5 ? "剛剛" : diff < 60 ? `${diff} 分鐘前` : `${Math.floor(diff/60)} 小時前`;
+            return `<li class="flex justify-between items-center bg-white p-3 rounded-lg border border-blue-100 shadow-sm mb-2">
+                        <span class="font-bold text-blue-700 text-sm">${u.username}</span>
+                        <span class="text-gray-400 text-[10px] bg-gray-50 px-2 py-1 rounded-full font-mono">${timeStr}</span>
+                    </li>`;
+        }).join('');
+    }
+
     function renderAdminAuditLog() {
         const ul = document.getElementById('adminAuditLog');
         if (!ul) return;
@@ -301,6 +357,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </li>`).join('');
     }
+
     document.addEventListener('openTaskDetail', (e) => openDetailModalById(e.detail));
 
     async function loadAdminUsers() {
@@ -316,6 +373,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 select.innerHTML = '<option value="">-- 請選擇要管理的學生 --</option>' + 
                     adminUserList.filter(u => u.role === 'student').map(u => `<option value="${u.username}">${u.username}</option>`).join('');
             }
+            renderLoginLogs();
+            renderBannedList();
         } catch (e) {}
     }
 
@@ -324,15 +383,25 @@ document.addEventListener('DOMContentLoaded', function() {
         adminSelect.addEventListener('change', (e) => {
             const target = e.target.value;
             const panel = document.getElementById('adminStudentPanel');
-            if (!target) { panel?.classList.add('hidden'); panel?.classList.remove('flex'); return; }
+            const msg = document.getElementById('adminStudentEmptyMsg');
+            
+            if(!target) { 
+                panel?.classList.add('hidden'); 
+                panel?.classList.remove('flex'); 
+                msg.classList.remove('hidden'); 
+                return; 
+            }
             
             panel?.classList.remove('hidden');
             panel?.classList.add('flex');
+            msg.classList.add('hidden'); 
             
             const uInfo = adminUserList.find(u => u.username === target);
             const statusEl = document.getElementById('adminStudentStatus');
             const btnBan = document.getElementById('btnAdminSuspend');
             
+            document.getElementById('adminSelectedStudentName').textContent = target;
+
             if (uInfo?.banned_until) {
                 statusEl.textContent = '🛑 停用中';
                 statusEl.className = 'px-2 py-1 rounded bg-red-100 text-red-700 text-xs font-bold';
@@ -347,33 +416,59 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    document.getElementById('btnAdminSuspend1D')?.addEventListener('click', async () => {
+    document.getElementById('btnAdminSuspend')?.addEventListener('click', async () => {
         const u = adminSelect?.value;
+        const dur = document.getElementById('banDurationSelect')?.value;
         if (!u) return;
-        if (confirm(`⚠️ 確定要停用 ${u} 1天嗎？`)) {
-            const d = new Date(); d.setDate(d.getDate()+1);
-            await fetch('/api/admin/user-status', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username: u, bannedUntil: d.toISOString() }) });
+        if (confirm(`⚠️ 確定要停用 ${u} 嗎？`)) {
+            const until = (dur === 'perm') ? 'permanent' : new Date(Date.now() + 86400000).toISOString();
+            await fetch('/api/admin/user-status', { 
+                method: 'POST', headers: {'Content-Type':'application/json'}, 
+                body: JSON.stringify({ username: u, bannedUntil: until }) 
+            });
             loadAdminUsers();
-        }
-    });
-
-    document.getElementById('btnAdminSuspendPerm')?.addEventListener('click', async () => {
-        const u = adminSelect?.value;
-        if (!u) return;
-        if (confirm(`⚠️ 確定要永久停用 ${u} 嗎？`)) {
-            await fetch('/api/admin/user-status', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username: u, bannedUntil: 'permanent' }) });
-            loadAdminUsers();
+            adminSelect.value = '';
+            adminSelect.dispatchEvent(new Event('change'));
         }
     });
 
     document.getElementById('btnAdminResetPwd')?.addEventListener('click', async () => {
         const u = adminSelect?.value;
         if (u && confirm(`確定重設 ${u} 的密碼為 12345678 嗎？`)) {
-            await fetch('/api/admin/reset-password', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username: u }) });
+            await fetch('/api/admin/reset-password', { 
+                method: 'POST', headers: {'Content-Type':'application/json'}, 
+                body: JSON.stringify({ username: u }) 
+            });
             alert("✅ 密碼已成功重置");
         }
     });
 
-    // 啟動
+    function renderBannedList() {
+        const ul = document.getElementById('adminBannedList');
+        if (!ul) return;
+        const list = adminUserList.filter(u => u.banned_until);
+        if (list.length === 0) {
+            ul.innerHTML = '<li class="text-gray-400 text-center py-4 text-xs">目前沒有停用的帳號</li>';
+            return;
+        }
+        ul.innerHTML = list.map(u => `
+            <li class="flex justify-between items-center p-3 bg-red-50 mb-2 rounded-lg border border-red-100 shadow-sm transition hover:bg-red-100">
+                <span class="text-sm font-bold text-red-900">${u.username}</span>
+                <button class="bg-green-500 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm" 
+                    onclick="document.dispatchEvent(new CustomEvent('unban', {detail:'${u.username}'}))">解封</button>
+            </li>`).join('');
+    }
+
+    document.addEventListener('unban', async (e) => {
+        await fetch('/api/admin/user-status', { 
+            method: 'POST', headers: {'Content-Type':'application/json'}, 
+            body: JSON.stringify({ username: e.detail, bannedUntil: '' }) 
+        });
+        loadAdminUsers();
+        adminSelect.value = '';
+        adminSelect.dispatchEvent(new Event('change'));
+    });
+
+    // 啟動程序
     loadData();
 });
