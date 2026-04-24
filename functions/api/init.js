@@ -1,12 +1,22 @@
+// 升級為 PBKDF2 演算法 (10萬次迭代，拖死黑客的顯示卡)
 async function hashPassword(password, salt) {
-    const msgBuffer = new TextEncoder().encode(password + salt);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveBits", "deriveKey"]
+    );
+    const hashBuffer = await crypto.subtle.deriveBits(
+        { name: "PBKDF2", salt: enc.encode(salt), iterations: 100000, hash: "SHA-256" },
+        keyMaterial, 256
+    );
     return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 export async function onRequestGet({ request, env }) {
     const url = new URL(request.url);
-    if (url.searchParams.get('key') !== 'S4C_Super_Admin_2026_Lock') {
+    // 優先讀取環境變數 INIT_SECRET，如果沒有才用寫死的密鑰 (防範代碼外洩風險)
+    const expectedKey = env.INIT_SECRET || 'S4C_Super_Admin_2026_Lock';
+    
+    if (url.searchParams.get('key') !== expectedKey) {
         return new Response("⛔ 拒絕訪問", { status: 403 });
     }
 
@@ -19,7 +29,7 @@ export async function onRequestGet({ request, env }) {
                 role TEXT NOT NULL, banned_until TEXT, last_login TEXT, 
                 session_token TEXT, token_created_at TEXT
             )
-        `).run(); // 💡 新增了 token_created_at 欄位
+        `).run();
         
         await env.DB.prepare(`
             CREATE TABLE IF NOT EXISTS tasks (
@@ -49,6 +59,6 @@ export async function onRequestGet({ request, env }) {
         }
 
         await env.DB.batch(stmts);
-        return new Response("✅ 安全資料庫 2.0 升級完成！", { status: 200 });
+        return new Response("✅ 終極防禦：PBKDF2 加鹽資料庫升級完成！", { status: 200 });
     } catch (e) { return new Response(e.message, { status: 500 }); }
 }
