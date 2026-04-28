@@ -345,17 +345,46 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderAdminAuditLog() {
         const ul = document.getElementById('adminAuditLog');
         if (!ul) return;
-        ul.innerHTML = taskList.slice(0, 20).map(log => `
-            <li class="border-b pb-3">
-                <div class="flex justify-between items-start mb-1">
-                    <span class="font-bold text-gray-800">${log.title}</span>
-                    <button class="bg-gray-100 px-2 py-1 rounded text-xs font-bold" onclick="document.dispatchEvent(new CustomEvent('openTaskDetail', {detail: '${log.id}'}))">查看</button>
-                </div>
-                <div class="text-xs text-gray-500 flex gap-2">
-                    <span class="bg-blue-100 text-blue-700 px-1 rounded">${log.createdBy || '系統'}</span>
-                    <span>${log.date}</span>
-                </div>
-            </li>`).join('');
+        ul.innerHTML = '';
+
+        taskList.slice(0, 20).forEach((log) => {
+            const li = document.createElement('li');
+            li.className = 'border-b pb-3';
+
+            const top = document.createElement('div');
+            top.className = 'flex justify-between items-start mb-1';
+
+            const title = document.createElement('span');
+            title.className = 'font-bold text-gray-800';
+            title.textContent = log.title || '';
+
+            const button = document.createElement('button');
+            button.className = 'bg-gray-100 px-2 py-1 rounded text-xs font-bold';
+            button.textContent = '查看';
+            button.addEventListener('click', () => {
+                document.dispatchEvent(new CustomEvent('openTaskDetail', { detail: String(log.id ?? '') }));
+            });
+
+            top.appendChild(title);
+            top.appendChild(button);
+
+            const meta = document.createElement('div');
+            meta.className = 'text-xs text-gray-500 flex gap-2';
+
+            const creator = document.createElement('span');
+            creator.className = 'bg-blue-100 text-blue-700 px-1 rounded';
+            creator.textContent = log.createdBy || '系統';
+
+            const date = document.createElement('span');
+            date.textContent = log.date || '';
+
+            meta.appendChild(creator);
+            meta.appendChild(date);
+
+            li.appendChild(top);
+            li.appendChild(meta);
+            ul.appendChild(li);
+        });
     }
 
     document.addEventListener('openTaskDetail', (e) => openDetailModalById(e.detail));
